@@ -125,30 +125,28 @@ body:has(.content-container.active) {
 
 .tree-item .icon {
     margin-right: 0.5rem;
-    font-size: 0.75rem;
-    width: 12px;
-    text-align: center;
+    width: 16px;
+    height: 16px;
     flex-shrink: 0;
+    background-size: contain;
+    background-repeat: no-repeat;
+    background-position: center;
 }
 
 .tree-item .folder-icon {
-    color: #8b7355;
+    background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="%238b7355" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7v10a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-9l-2-2H5a2 2 0 0 0-2 2z"/></svg>');
 }
 
 .tree-item .file-icon {
-    color: #666;
+    background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="%23666" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="15" y2="17"/></svg>');
 }
 
-.tree-item.folder .folder-icon.collapsed::before {
-    content: '▸';
+.tree-item.folder .folder-icon.collapsed {
+    opacity: 0.7;
 }
 
-.tree-item.folder .folder-icon.expanded::before {
-    content: '▾';
-}
-
-.tree-item.file .file-icon::before {
-    content: '📄';
+.tree-item.folder .folder-icon.expanded {
+    opacity: 1;
 }
 
 .tree-children {
