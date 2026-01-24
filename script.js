@@ -2,6 +2,7 @@
 const terminalInput = document.getElementById('terminalInput');
 const terminalOutput = document.getElementById('terminalOutput');
 const cursor = document.querySelector('.cursor');
+const promptEl = document.querySelector('.terminal-prompt');
 
 // Command history
 let commandHistory = [];
@@ -30,6 +31,12 @@ function init() {
     // Position cursor at the end of input
     terminalInput.addEventListener('input', updateCursor);
     terminalInput.addEventListener('click', updateCursor);
+
+    // Handle resize so cursor stays aligned
+    window.addEventListener('resize', updateCursor);
+
+    // Initial placement
+    updateCursor();
 }
 
 // Handle keyboard input
@@ -75,9 +82,19 @@ function navigateHistory(direction) {
 
 // Update cursor position
 function updateCursor() {
+    const container = terminalInput.parentElement;
+    const containerRect = container.getBoundingClientRect();
     const inputRect = terminalInput.getBoundingClientRect();
+
+    const gap = parseFloat(window.getComputedStyle(container).gap || 0);
+    const promptWidth = promptEl ? promptEl.getBoundingClientRect().width : 0;
     const textWidth = getTextWidth(terminalInput.value, terminalInput);
-    cursor.style.marginLeft = `${textWidth - 8}px`;
+
+    // Align cursor immediately after the prompt + gap + typed text
+    const leftOffset = promptWidth + gap + textWidth;
+    cursor.style.left = `${leftOffset}px`;
+    cursor.style.top = `${inputRect.top - containerRect.top}px`;
+    cursor.style.height = `${inputRect.height}px`;
 }
 
 // Get text width helper

@@ -9,11 +9,12 @@
 
 :root {
     --color-snowbound: #F2F0EB;
-    --color-terminal-bg: #1e1e1e;
-    --color-terminal-text: #d4d4d4;
-    --color-prompt: #4ec9b0;
-    --color-green: #6a9955;
-    --color-error: #f48771;
+    --color-terminal-bg: #ffffff;
+    --color-terminal-text: #2a2a2a;
+    --color-prompt: #2a2a2a;
+    --color-green: #2a2a2a;
+    --color-error: #2a2a2a;
+    --color-border: #2a2a2a;
     --font-mono: 'Fira Code', 'Courier New', 'Courier Prime', monospace;
 }
 
@@ -39,9 +40,8 @@ body {
     max-width: 900px;
     height: 600px;
     background-color: var(--color-terminal-bg);
+    border: 1px solid var(--color-border);
     border-radius: 10px;
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4),
-                0 0 0 1px rgba(255, 255, 255, 0.1);
     display: flex;
     flex-direction: column;
     overflow: hidden;
@@ -59,48 +59,6 @@ body {
     }
 }
 
-/* Terminal Header */
-.terminal-header {
-    background: linear-gradient(to bottom, #3c3c3c 0%, #2d2d2d 100%);
-    padding: 0.75rem 1rem;
-    display: flex;
-    align-items: center;
-    border-bottom: 1px solid #1a1a1a;
-    position: relative;
-}
-
-.terminal-buttons {
-    display: flex;
-    gap: 0.5rem;
-}
-
-.terminal-button {
-    width: 12px;
-    height: 12px;
-    border-radius: 50%;
-    display: inline-block;
-}
-
-.terminal-button.close {
-    background-color: #ff5f56;
-}
-
-.terminal-button.minimize {
-    background-color: #ffbd2e;
-}
-
-.terminal-button.maximize {
-    background-color: #27c93f;
-}
-
-.terminal-title {
-    position: absolute;
-    left: 50%;
-    transform: translateX(-50%);
-    font-size: 0.875rem;
-    color: #999;
-    font-weight: 500;
-}
 
 /* Terminal Body */
 .terminal-body {
@@ -147,6 +105,7 @@ body {
     align-items: center;
     gap: 0.75rem;
     margin-top: auto;
+    position: relative;
 }
 
 .terminal-prompt {
@@ -167,17 +126,19 @@ body {
 }
 
 .terminal-input::selection {
-    background: rgba(255, 255, 255, 0.2);
+    background: rgba(0, 0, 0, 0.1);
 }
 
 /* Blinking Cursor */
 .cursor {
+    position: absolute;
     display: inline-block;
     width: 8px;
-    height: 18px;
+    height: 1.1em;
     background-color: var(--color-terminal-text);
     animation: blink 1s step-end infinite;
-    margin-left: -8px;
+    left: 0;
+    top: 0;
 }
 
 @keyframes blink {
@@ -197,18 +158,18 @@ body {
 
 .terminal-body::-webkit-scrollbar-track,
 .terminal-output::-webkit-scrollbar-track {
-    background: #1a1a1a;
+    background: #f5f5f5;
 }
 
 .terminal-body::-webkit-scrollbar-thumb,
 .terminal-output::-webkit-scrollbar-thumb {
-    background: #4a4a4a;
+    background: #cccccc;
     border-radius: 4px;
 }
 
 .terminal-body::-webkit-scrollbar-thumb:hover,
 .terminal-output::-webkit-scrollbar-thumb:hover {
-    background: #5a5a5a;
+    background: #999999;
 }
 
 /* Responsive Design */
@@ -238,20 +199,6 @@ body {
 @media (max-width: 480px) {
     .terminal-container {
         height: 400px;
-        border-radius: 8px;
-    }
-
-    .terminal-header {
-        padding: 0.5rem 0.75rem;
-    }
-
-    .terminal-button {
-        width: 10px;
-        height: 10px;
-    }
-
-    .terminal-title {
-        font-size: 0.75rem;
     }
 
     .terminal-body {
