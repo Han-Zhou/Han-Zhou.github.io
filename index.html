@@ -10,19 +10,24 @@
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
+    <!-- Content Display Area (hidden by default) -->
+    <div class="content-container" id="contentContainer">
+        <div class="content-body" id="contentBody"></div>
+    </div>
+
     <!-- Terminal Container -->
-    <div class="terminal-container">
+    <div class="terminal-container" id="terminalContainer">
         <!-- Terminal Output Area -->
         <div class="terminal-body">
             <div class="terminal-output" id="terminalOutput">
                 <div class="output-line">Welcome to Han Zhou's Little Corner of the Internet :D</div>
-                <div class="output-line">Type /help to see available commands</div>
+                <div class="output-line">Type 'help' to see available commands, or 'ls' to see what's here</div>
                 <div class="output-line">&nbsp;</div>
             </div>
 
             <!-- Terminal Input Line -->
             <div class="terminal-input-line">
-                <span class="terminal-prompt">$</span>
+                <span class="terminal-prompt" id="terminalPrompt">~$</span>
                 <input
                     type="text"
                     class="terminal-input"
