@@ -37,26 +37,28 @@ body {
 
 body:has(.content-container.active) {
     justify-content: flex-start;
+    padding: 0 3rem 16px 3rem;
+    height: 100vh;
+    overflow: hidden;
 }
 
 /* Content Container */
 .content-container {
     display: none;
     width: 100%;
-    max-width: 900px;
+    max-width: none;
     flex: 1;
     background-color: var(--color-terminal-bg);
     border: 1px solid var(--color-border);
     border-radius: 10px 10px 0 0;
-    padding: 3rem;
-    overflow-y: auto;
-    margin-bottom: 0;
+    padding: 0;
+    overflow: hidden;
+    margin: 16px 0 0 0;
     animation: contentAppear 0.3s ease-out;
-    max-height: calc(100vh - 250px);
 }
 
 .content-container.active {
-    display: block;
+    display: flex;
 }
 
 @keyframes contentAppear {
@@ -70,9 +72,99 @@ body:has(.content-container.active) {
     }
 }
 
+/* File Tree Sidebar */
+.file-tree-sidebar {
+    width: 280px;
+    background-color: #f8f8f8;
+    border-right: 1px solid var(--color-border);
+    overflow-y: auto;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.sidebar-header {
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    padding: 1rem 1.25rem 0.5rem 1.25rem;
+    color: #666;
+    text-transform: uppercase;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.file-tree {
+    padding: 0.75rem 0;
+    flex: 1;
+    overflow-y: auto;
+}
+
+.tree-item {
+    display: flex;
+    align-items: center;
+    padding: 0.35rem 1.25rem;
+    cursor: pointer;
+    font-size: 0.85rem;
+    color: var(--color-terminal-text);
+    user-select: none;
+    transition: background-color 0.15s ease;
+}
+
+.tree-item:hover {
+    background-color: #e8e8e8;
+}
+
+.tree-item.active {
+    background-color: #d0d0d0;
+    font-weight: 500;
+}
+
+.tree-item.folder {
+    font-weight: 500;
+}
+
+.tree-item .icon {
+    margin-right: 0.5rem;
+    font-size: 0.75rem;
+    width: 12px;
+    text-align: center;
+    flex-shrink: 0;
+}
+
+.tree-item .folder-icon {
+    color: #8b7355;
+}
+
+.tree-item .file-icon {
+    color: #666;
+}
+
+.tree-item.folder .folder-icon.collapsed::before {
+    content: '▸';
+}
+
+.tree-item.folder .folder-icon.expanded::before {
+    content: '▾';
+}
+
+.tree-item.file .file-icon::before {
+    content: '📄';
+}
+
+.tree-children {
+    padding-left: 1rem;
+}
+
+.tree-children.collapsed {
+    display: none;
+}
+
 .content-body {
-    max-width: 700px;
-    margin: 0 auto;
+    flex: 1;
+    max-width: none;
+    padding: 3rem;
+    overflow-y: auto;
+    margin: 0;
 }
 
 .content-body h1 {
@@ -132,8 +224,8 @@ body:has(.content-container.active) {
     flex: 0 0 auto;
     border-radius: 0 0 10px 10px;
     border-top: none;
-    margin-top: 0;
-    margin-bottom: 0;
+    margin: 0;
+    max-width: none;
 }
 
 @keyframes terminalAppear {
@@ -260,26 +352,30 @@ body:has(.content-container.active) {
 /* Scrollbar Styling */
 .terminal-body::-webkit-scrollbar,
 .terminal-output::-webkit-scrollbar,
-.content-container::-webkit-scrollbar {
+.content-body::-webkit-scrollbar,
+.file-tree::-webkit-scrollbar {
     width: 8px;
 }
 
 .terminal-body::-webkit-scrollbar-track,
 .terminal-output::-webkit-scrollbar-track,
-.content-container::-webkit-scrollbar-track {
+.content-body::-webkit-scrollbar-track,
+.file-tree::-webkit-scrollbar-track {
     background: #f5f5f5;
 }
 
 .terminal-body::-webkit-scrollbar-thumb,
 .terminal-output::-webkit-scrollbar-thumb,
-.content-container::-webkit-scrollbar-thumb {
+.content-body::-webkit-scrollbar-thumb,
+.file-tree::-webkit-scrollbar-thumb {
     background: #cccccc;
     border-radius: 4px;
 }
 
 .terminal-body::-webkit-scrollbar-thumb:hover,
 .terminal-output::-webkit-scrollbar-thumb:hover,
-.content-container::-webkit-scrollbar-thumb:hover {
+.content-body::-webkit-scrollbar-thumb:hover,
+.file-tree::-webkit-scrollbar-thumb:hover {
     background: #999999;
 }
 
@@ -296,15 +392,20 @@ body:has(.content-container.active) {
 
     .content-container {
         max-width: 100%;
-        padding: 2rem;
+        margin: 16px;
+        max-height: calc(100vh - 200px);
     }
 
     .terminal-body {
         padding: 1rem;
     }
 
-    .content-container {
-        max-height: calc(100vh - 200px);
+    /* Hide sidebar on tablet and mobile */
+    .file-tree-sidebar {
+        display: none;
+    }
+
+    .content-body {
         padding: 2rem;
     }
 
@@ -340,15 +441,14 @@ body:has(.content-container.active) {
     }
 
     .content-container {
-        padding: 1.5rem;
+        max-height: calc(100vh - 180px);
     }
 
     .terminal-body {
         padding: 0.75rem;
     }
 
-    .content-container {
-        max-height: calc(100vh - 180px);
+    .content-body {
         padding: 1.5rem;
     }
 

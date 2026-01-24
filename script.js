@@ -6,6 +6,7 @@ const promptEl = document.querySelector('.terminal-prompt');
 const terminalContainer = document.getElementById('terminalContainer');
 const contentContainer = document.getElementById('contentContainer');
 const contentBody = document.getElementById('contentBody');
+const fileTreeContainer = document.getElementById('fileTree');
 
 // Command history
 let commandHistory = [];
@@ -55,6 +56,9 @@ const fileSystem = {
 let currentPath = [];
 let currentDirectory = fileSystem;
 
+// Track currently active file for sidebar highlighting
+let activeFile = null;
+
 // Available commands
 const commands = {
     'help': handleHelp,
@@ -67,6 +71,7 @@ const commands = {
 function init() {
     terminalInput.focus();
     updatePrompt();
+    buildFileTree();
 
     // Keep input focused
     document.addEventListener('click', (e) => {
@@ -326,6 +331,10 @@ async function displayFile(file) {
         }
         const content = await response.text();
 
+        // Track active file and update tree highlighting
+        activeFile = file;
+        updateFileTreeHighlight();
+
         // Show content container
         contentContainer.classList.add('active');
         contentBody.innerHTML = content;
@@ -353,7 +362,95 @@ function navigateToPath(path) {
 function closeFileView() {
     contentContainer.classList.remove('active');
     terminalContainer.classList.remove('minimized');
+    activeFile = null;
+    updateFileTreeHighlight();
     terminalInput.focus();
+}
+
+// Build the file tree sidebar
+function buildFileTree() {
+    fileTreeContainer.innerHTML = '';
+
+    // Start with home directory
+    const homeFolder = createTreeFolder(fileSystem, [], true);
+    fileTreeContainer.appendChild(homeFolder);
+}
+
+// Create a folder element in the tree
+function createTreeFolder(folder, path, isExpanded = false) {
+    const container = document.createElement('div');
+
+    // Folder header
+    const folderItem = document.createElement('div');
+    folderItem.className = 'tree-item folder';
+    folderItem.innerHTML = `
+        <span class="icon folder-icon ${isExpanded ? 'expanded' : 'collapsed'}"></span>
+        <span>${folder.name}</span>
+    `;
+
+    // Toggle folder on click
+    folderItem.addEventListener('click', (e) => {
+        e.stopPropagation();
+        childrenContainer.classList.toggle('collapsed');
+        const icon = folderItem.querySelector('.folder-icon');
+        icon.classList.toggle('collapsed');
+        icon.classList.toggle('expanded');
+    });
+
+    container.appendChild(folderItem);
+
+    // Children container
+    const childrenContainer = document.createElement('div');
+    childrenContainer.className = `tree-children ${isExpanded ? '' : 'collapsed'}`;
+
+    if (folder.children) {
+        folder.children.forEach(child => {
+            if (child.type === 'section') {
+                const childPath = [...path, child.name];
+                childrenContainer.appendChild(createTreeFolder(child, childPath, false));
+            } else if (child.type === 'file') {
+                childrenContainer.appendChild(createTreeFile(child, path));
+            }
+        });
+    }
+
+    container.appendChild(childrenContainer);
+    return container;
+}
+
+// Create a file element in the tree
+function createTreeFile(file, path) {
+    const fileItem = document.createElement('div');
+    fileItem.className = 'tree-item file';
+    fileItem.setAttribute('data-file-path', file.path);
+    fileItem.innerHTML = `
+        <span class="icon file-icon"></span>
+        <span>${file.name}</span>
+    `;
+
+    // Click to open file
+    fileItem.addEventListener('click', (e) => {
+        e.stopPropagation();
+        displayFile(file);
+    });
+
+    return fileItem;
+}
+
+// Update file tree highlighting
+function updateFileTreeHighlight() {
+    // Remove all active states
+    document.querySelectorAll('.tree-item.file').forEach(item => {
+        item.classList.remove('active');
+    });
+
+    // Highlight active file
+    if (activeFile) {
+        const activeElement = document.querySelector(`.tree-item.file[data-file-path="${activeFile.path}"]`);
+        if (activeElement) {
+            activeElement.classList.add('active');
+        }
+    }
 }
 
 // Handle unknown command
