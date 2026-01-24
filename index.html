@@ -3,165 +3,47 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Arush Agrawal</title>
+    <title>Terminal - Arush Agrawal</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Courier+Prime:wght@400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <!-- Hero Section -->
-    <section class="hero">
-        <nav class="nav">
-            <button class="nav-search" aria-label="Search">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <circle cx="11" cy="11" r="8"></circle>
-                    <path d="m21 21-4.35-4.35"></path>
-                </svg>
-            </button>
-            
-            <div class="nav-brand">Arush Agrawal</div>
-            
-            <div class="nav-actions">
-                <a href="#posts" class="nav-link">Home</a>
-                <a href="#about" class="nav-link">About</a>
-                <button class="btn-subscribe-nav">Subscribe</button>
+    <!-- Terminal Container -->
+    <div class="terminal-container">
+        <!-- Terminal Header -->
+        <div class="terminal-header">
+            <div class="terminal-buttons">
+                <span class="terminal-button close"></span>
+                <span class="terminal-button minimize"></span>
+                <span class="terminal-button maximize"></span>
             </div>
-        </nav>
-
-        <div class="hero-content">
-            <h1 class="hero-title">Welcome.</h1>
-            
-            <form class="subscribe-form" id="subscribeForm">
-                <input 
-                    type="email" 
-                    class="subscribe-input" 
-                    placeholder="jamie@example.com"
-                    required
-                >
-                <button type="submit" class="btn-subscribe">Subscribe</button>
-            </form>
+            <div class="terminal-title">arush@terminal:~</div>
         </div>
 
-        <button class="floating-mail" aria-label="Contact">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <rect width="20" height="16" x="2" y="4" rx="2"></rect>
-                <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"></path>
-            </svg>
-        </button>
-    </section>
-
-    <!-- Posts Section -->
-    <section class="posts" id="posts">
-        <article class="post">
-            <a href="#" class="post-link">
-                <h2 class="post-title">Guess-timating Integrals.</h2>
-            </a>
-            <div class="post-meta">
-                <time datetime="2025-10-22">22 Oct 2025</time>
-                <span class="separator">·</span>
-                <span>4 min read</span>
+        <!-- Terminal Output Area -->
+        <div class="terminal-body">
+            <div class="terminal-output" id="terminalOutput">
+                <div class="output-line">Welcome to Arush Agrawal's Terminal</div>
+                <div class="output-line">Type /help to see available commands</div>
+                <div class="output-line">&nbsp;</div>
             </div>
-        </article>
 
-        <article class="post">
-            <a href="#" class="post-link">
-                <h2 class="post-title">A Proof of the Universal Approximation Theorem.</h2>
-            </a>
-            <div class="post-meta">
-                <time datetime="2025-10-12">12 Oct 2025</time>
-                <span class="separator">·</span>
-                <span>7 min read</span>
-            </div>
-        </article>
-
-        <article class="post">
-            <a href="#" class="post-link">
-                <h2 class="post-title">The FF Neural Exploratory Lab.</h2>
-            </a>
-            <div class="post-meta">
-                <time datetime="2025-04-08">08 Apr 2025</time>
-                <span class="separator">·</span>
-                <span>5 min read</span>
-            </div>
-        </article>
-
-        <article class="post">
-            <a href="#" class="post-link">
-                <h2 class="post-title">Understanding Gradient Descent Dynamics.</h2>
-            </a>
-            <div class="post-meta">
-                <time datetime="2025-03-15">15 Mar 2025</time>
-                <span class="separator">·</span>
-                <span>6 min read</span>
-            </div>
-        </article>
-
-        <article class="post">
-            <a href="#" class="post-link">
-                <h2 class="post-title">Bayesian Optimization for Hyperparameters.</h2>
-            </a>
-            <div class="post-meta">
-                <time datetime="2025-02-01">01 Feb 2025</time>
-                <span class="separator">·</span>
-                <span>8 min read</span>
-            </div>
-        </article>
-    </section>
-
-    <!-- About Section -->
-    <section class="about" id="about">
-        <div class="about-content">
-            <h2 class="about-title">About</h2>
-            <p class="about-text">
-                Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor 
-                incididunt ut labore et dolore magna aliqua. Exploring the intersections of 
-                mathematics, machine learning, and computational theory.
-            </p>
-            <p class="about-text">
-                Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut 
-                aliquip ex ea commodo consequat. Writing about neural networks, optimization, 
-                and the beautiful mathematics that powers modern AI.
-            </p>
-        </div>
-    </section>
-
-    <!-- Footer -->
-    <footer class="footer">
-        <p>&copy; 2025 Arush Agrawal. All rights reserved.</p>
-    </footer>
-
-    <!-- Subscribe Modal -->
-    <div class="modal-overlay" id="modalOverlay">
-        <div class="modal">
-            <button class="modal-close" id="modalClose" aria-label="Close">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M18 6 6 18"></path>
-                    <path d="m6 6 12 12"></path>
-                </svg>
-            </button>
-            <div class="modal-content">
-                <h3 class="modal-title">Subscribe to Newsletter</h3>
-                <p class="modal-text">Get the latest posts delivered directly to your inbox.</p>
-                <form class="modal-form" id="modalSubscribeForm">
-                    <input 
-                        type="email" 
-                        class="modal-input" 
-                        placeholder="your@email.com"
-                        required
-                    >
-                    <button type="submit" class="btn-modal-subscribe">Subscribe</button>
-                </form>
+            <!-- Terminal Input Line -->
+            <div class="terminal-input-line">
+                <span class="terminal-prompt">$</span>
+                <input
+                    type="text"
+                    class="terminal-input"
+                    id="terminalInput"
+                    autocomplete="off"
+                    spellcheck="false"
+                    autofocus
+                />
+                <span class="cursor"></span>
             </div>
         </div>
-    </div>
-
-    <!-- Success Toast -->
-    <div class="toast" id="toast">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M20 6 9 17l-5-5"></path>
-        </svg>
-        <span>Successfully subscribed!</span>
     </div>
 
     <script src="script.js"></script>
