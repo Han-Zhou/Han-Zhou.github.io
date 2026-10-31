@@ -1,0 +1,43 @@
+---
+import { getCollection } from 'astro:content';
+import ContentCard from '../../components/ContentCard.astro';
+import SiteNav from '../../components/SiteNav.astro';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { formatDate, readingTime } from '../../lib/content';
+
+const writing = (await getCollection('writing', ({ data }) => data.status === 'published'))
+  .sort((a, b) => b.data.date.valueOf() - a.data.date.valueOf());
+---
+
+<BaseLayout
+  title="Writing — Han Zhou"
+  description="Articles, research notes, tutorials, and assorted observations by Han Zhou."
+  bodyClass="index-page"
+>
+  <SiteNav />
+  <main id="main-content" class="index-main">
+    <header class="index-hero">
+      <h1>Writing</h1>
+    </header>
+
+    <div class="index-intro">
+      <p>A mixed shelf of technical explanations, unfinished questions, and ideas that survived contact with a keyboard.</p>
+    </div>
+
+    <section class="content-grid" aria-label="Writing index">
+      {writing.map((entry, index) => (
+        <ContentCard
+          href={`/writing/${entry.id}/`}
+          number={index + 1}
+          title={entry.data.title}
+          summary={entry.data.description}
+          date={formatDate(entry.data.date)}
+          type={entry.data.type}
+          minutes={readingTime(entry.body)}
+          kind="writing"
+          placeholder={entry.data.placeholder}
+        />
+      ))}
+    </section>
+  </main>
+</BaseLayout>

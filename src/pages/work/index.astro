@@ -1,0 +1,40 @@
+---
+import { getCollection } from 'astro:content';
+import ContentCard from '../../components/ContentCard.astro';
+import SiteNav from '../../components/SiteNav.astro';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { formatDate } from '../../lib/content';
+
+const work = (await getCollection('work')).sort((a, b) => (a.data.order ?? 999) - (b.data.order ?? 999));
+---
+
+<BaseLayout
+  title="Work — Han Zhou"
+  description="Software, research, experiments, and other things Han Zhou has built or broken."
+  bodyClass="index-page"
+>
+  <SiteNav />
+  <main id="main-content" class="index-main">
+    <header class="index-hero">
+      <h1>Work</h1>
+    </header>
+
+    <div class="index-intro">
+      <p>Things made to test an idea, understand a system, or find out exactly where it gives way.</p>
+    </div>
+
+    <section class="content-grid" aria-label="Work index">
+      {work.map((entry, index) => (
+        <ContentCard
+          href={`/work/${entry.id}/`}
+          number={index + 1}
+          title={entry.data.title}
+          summary={entry.data.summary}
+          date={formatDate(entry.data.date)}
+          kind="work"
+          placeholder={entry.data.placeholder}
+        />
+      ))}
+    </section>
+  </main>
+</BaseLayout>

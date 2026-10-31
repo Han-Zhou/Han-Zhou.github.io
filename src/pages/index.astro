@@ -1,0 +1,33 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+---
+
+<BaseLayout bodyClass="home-page">
+  <main id="main-content" class="home-poster">
+    <p class="home-panel home-rail home-rail--left">Han studies math and computer science</p>
+
+    <section class="home-panel home-name" aria-labelledby="home-title">
+      <h1 id="home-title"><span>Han</span><span>Zhou</span></h1>
+    </section>
+
+    <a class="home-panel home-panel--paper home-link home-link--paper home-link--work" href="/work/">
+      <span>Work</span><span>01</span>
+    </a>
+    <a class="home-panel home-link home-link--writing" href="/writing/">
+      <span>Writing</span><span>02</span>
+    </a>
+    <p class="home-panel home-likes">likes zoning out, learning stuff that are mostly useless, playing soccer, doing calisthenics</p>
+    <a class="home-panel home-link home-link--contact" href="/about/">
+      <span>Contact</span><span>03</span>
+    </a>
+    <section class="home-panel home-panel--paper home-interests">
+      <h2>Interests</h2>
+      <p class="placeholder-field">[Research interests to be added]</p>
+      <p class="placeholder-field">[Technical interests to be added]</p>
+      <p class="placeholder-field">[Personal interests to be added]</p>
+    </section>
+    <a class="home-panel home-panel--paper home-link home-link--paper home-link--resume" href="/resume/">
+      <span>Résumé</span><span>04 / soon</span>
+    </a>
+  </main>
+</BaseLayout>

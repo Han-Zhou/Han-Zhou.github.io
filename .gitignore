@@ -1,0 +1,11 @@
+.DS_Store
+.astro/
+dist/
+node_modules/
+.env
+.env.*
+!.env.example
+
+# This local note predates the Astro site and is intentionally untracked.
+/README.md
+/archived_versions/terminal/CLAUDE.md

@@ -1,0 +1,36 @@
+---
+import BaseLayout from './BaseLayout.astro';
+import SiteNav from '../components/SiteNav.astro';
+
+interface Props {
+  title: string;
+  description: string;
+  date: string;
+  kicker: string;
+  placeholder?: boolean;
+}
+
+const { title, description, date, kicker, placeholder = false } = Astro.props;
+---
+
+<BaseLayout title={`${title} — Han Zhou`} description={description} bodyClass="paper-page">
+  <SiteNav />
+  <main id="main-content" class="article-shell">
+    <header class="article-header">
+      <p class="article-header__rail" aria-hidden="true">{kicker} / {kicker} / {kicker}</p>
+      <div class="article-header__copy">
+        <div class="eyebrow-row">
+          <span>{kicker}</span>
+          <time>{date}</time>
+        </div>
+        {placeholder && <p class="placeholder-stamp">Placeholder content</p>}
+        <h1>{title}</h1>
+        <p class="article-header__description">{description}</p>
+      </div>
+      <div class="article-header__pattern halftone" aria-hidden="true"></div>
+    </header>
+    <article class="prose">
+      <slot />
+    </article>
+  </main>
+</BaseLayout>

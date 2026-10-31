@@ -1,0 +1,27 @@
+---
+const path = Astro.url.pathname;
+const links = [
+  { href: '/work/', label: 'Work' },
+  { href: '/writing/', label: 'Writing' },
+  { href: '/about/', label: 'Contact' },
+  { href: '/resume/', label: 'Résumé' },
+];
+
+const isCurrent = (href: string) => path === href || (href !== '/' && path.startsWith(href));
+---
+
+<header class="site-nav-wrap">
+  <nav class="site-nav" aria-label="Primary navigation">
+    <a class="site-nav__brand" href="/" aria-label="Han Zhou, home">
+      <span aria-hidden="true">HZ</span>
+      <span class="sr-only">Han Zhou</span>
+    </a>
+    <div class="site-nav__links">
+      {links.map((link) => (
+        <a href={link.href} aria-current={isCurrent(link.href) ? 'page' : undefined}>
+          {link.label}
+        </a>
+      ))}
+    </div>
+  </nav>
+</header>

@@ -1,0 +1,32 @@
+---
+interface Props {
+  href: string;
+  number: number;
+  title: string;
+  summary: string;
+  date: string;
+  type?: string;
+  minutes?: number;
+  kind: 'work' | 'writing';
+  placeholder?: boolean;
+}
+
+const { href, number, title, summary, date, type, minutes, kind, placeholder = false } = Astro.props;
+---
+
+<article class={`content-card content-card--${kind}`}>
+  <a href={href} aria-label={`Read ${title}`}>
+    <div class="content-card__copy">
+      <div class="content-card__meta">
+        <span>{String(number).padStart(2, '0')}</span>
+        {type && <span>{type}</span>}
+        <time>{date}</time>
+        {minutes && <span>{minutes} min</span>}
+      </div>
+      {placeholder && <p class="placeholder-stamp">Placeholder content</p>}
+      <h2>{title}</h2>
+      <p>{summary}</p>
+      <span class="content-card__action" aria-hidden="true">Open →</span>
+    </div>
+  </a>
+</article>
