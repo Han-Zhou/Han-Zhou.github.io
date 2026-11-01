@@ -1,0 +1,28 @@
+---
+import '../../styles/viz.css';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { visualizations } from '../../viz/registry';
+
+const groups = [...new Set(visualizations.map((v) => v.group))];
+---
+
+<BaseLayout
+  title="Visualizations — Han Zhou"
+  description="Interactive visualizations of optimization algorithms and convex geometry."
+>
+  <h1>Visualizations</h1>
+  <p class="muted">Interactive pictures of optimization and convex geometry. Drag the points, move the sliders, break the algorithms.</p>
+  {groups.map((group) => (
+    <>
+      <h2 class="section-title">{group}</h2>
+      <ul class="viz-grid-list">
+        {visualizations.filter((v) => v.group === group).map((v) => (
+          <li>
+            <a href={`/visualizations/${v.slug}/`}>{v.title}</a>
+            <p>{v.summary}</p>
+          </li>
+        ))}
+      </ul>
+    </>
+  ))}
+</BaseLayout>

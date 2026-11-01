@@ -1,0 +1,260 @@
+---
+import VizLayout from '../../layouts/VizLayout.astro';
+import { tex } from '../../lib/tex';
+---
+
+<VizLayout
+  title="Conjugate gradient"
+  topic="Optimization"
+  description="Interactive conjugate gradient vs steepest descent: A-conjugate directions, whitened coordinates, and nonlinear CG variants."
+>
+  <p>
+    Steepest descent forgets everything after each step, so it keeps undoing its own progress. Conjugate gradient keeps one
+    vector of memory: the new direction is the negative gradient plus a multiple of the old direction,
+  </p>
+  <Fragment set:html={tex(String.raw`p_{k} = -\nabla f(x_{k}) + \beta_k\, p_{k-1},`, true)} />
+  <p>
+    with <Fragment set:html={tex(String.raw`\beta_k`)} /> chosen so that, on a quadratic <Fragment set:html={tex(String.raw`f(x) = \tfrac12 (x-c)^\top A (x-c)`)} />, consecutive directions are <em>A-conjugate</em>: <Fragment set:html={tex(String.raw`p_k^\top A\, p_{k-1} = 0`)} />. With exact line searches,
+    minimizing along conjugate directions never spoils earlier progress, so CG solves an <Fragment set:html={tex(String.raw`n`)} />-dimensional quadratic in at most <Fragment set:html={tex(String.raw`n`)} /> steps — here, two.
+  </p>
+  <p>
+    Conjugacy is just orthogonality in disguise. In the coordinates <Fragment set:html={tex(String.raw`z = A^{1/2}(x-c)`)} /> the level sets become circles and A-conjugate directions become perpendicular. Tick “whitened coordinates” to see it.
+  </p>
+
+  <div class="viz" id="cg">
+    <div class="viz-panels">
+      <div class="viz-panel"><canvas data-c="main"></canvas></div>
+      <div class="viz-panel"><canvas data-c="conv" class="short"></canvas></div>
+    </div>
+    <ul class="viz-legend">
+      <li style="color: var(--viz-1)"><i></i>conjugate gradient</li>
+      <li style="color: var(--viz-2)"><i></i>steepest descent</li>
+      <li style="color: var(--viz-3)"><i></i>previous direction pₖ₋₁</li>
+    </ul>
+    <p class="viz-hint">Drag the hollow point to move the starting point.</p>
+    <div class="viz-controls">
+      <label>Function
+        <select data-k="fn">
+          <option value="quadratic">Quadratic</option>
+          <option value="lse">Exponential bowl</option>
+          <option value="rosenbrock">Rosenbrock</option>
+          <option value="himmelblau">Himmelblau</option>
+        </select>
+      </label>
+      <label data-only="quadratic">κ <input type="range" data-k="kappa" min="1" max="50" step="1" value="12" /><output></output></label>
+      <label data-only="quadratic">θ <input type="range" data-k="theta" min="0" max="180" step="5" value="30" /><output></output></label>
+      <label>β formula
+        <select data-k="beta">
+          <option value="FR">Fletcher–Reeves</option>
+          <option value="PR" selected>Polak–Ribière (PR+)</option>
+          <option value="HS">Hestenes–Stiefel</option>
+        </select>
+      </label>
+      <label>Line search
+        <select data-k="ls">
+          <option value="exact">Exact</option>
+          <option value="wolfe">Strong Wolfe (c₂ = 0.1)</option>
+          <option value="armijo">Backtracking (Armijo)</option>
+        </select>
+      </label>
+      <label><input type="checkbox" data-k="sd" checked /> steepest descent</label>
+      <label data-only="quadratic"><input type="checkbox" data-k="ellipse" checked /> level set through xₖ</label>
+      <label data-only="quadratic"><input type="checkbox" data-k="whiten" /> whitened coordinates z = A<sup>1/2</sup>(x − c)</label>
+      <span class="viz-buttons">
+        <button data-act="reset">⏮</button>
+        <button data-act="back">‹</button>
+        <button data-act="play">Play</button>
+        <button data-act="step">›</button>
+        <button data-act="end">⏭</button>
+      </span>
+    </div>
+    <p class="viz-readout" data-out="readout"></p>
+  </div>
+
+  <h2>Things to try</h2>
+  <ul>
+    <li>On the quadratic, drag the start point off the axes of the ellipses. Steepest descent zig-zags at right angles, and CG finishes in 2 steps.</li>
+    <li>Drag the start point onto an eigenvector axis. Both methods finish in 1 step, so there is nothing to compare.</li>
+    <li>Step to k = 1 and compare where each second step lands. For steepest descent <Fragment set:html={tex(String.raw`d_0^\top d_1 = 0`)} /> (orthogonal); for CG <Fragment set:html={tex(String.raw`d_0^\top A d_1 = 0`)} /> (conjugate). The readout shows both.</li>
+  </ul>
+</VizLayout>
+
+<script>
+  import { Plot, contours, drawContours, controls, player, out, fmt, norm, dot, add, sub, type Vec, type ContourSet, type View } from '../../viz/core';
+  import { add3DToggle } from '../../viz/view3d';
+  import { objective, ellipse, symInv, symMul, type Objective, type Sym } from '../../viz/functions';
+  import { conjugateGradient, gradientDescent, type Iterate, type LineSearch } from '../../viz/optim';
+  import { convergence, type Series } from '../../viz/charts';
+  import { padded, symSqrt } from '../../viz/quasi';
+
+  const root = document.getElementById('cg')!;
+  const main = new Plot(root.querySelector<HTMLCanvasElement>('[data-c="main"]')!, { x: [-4, 4], y: [-3, 3] });
+  const conv = new Plot(root.querySelector<HTMLCanvasElement>('[data-c="conv"]')!, { x: [0, 1], y: [0, 1] }, { equal: false });
+
+  let obj: Objective;
+  let csX: ContourSet; // contours in x coordinates
+  let csZ: ContourSet | null = null; // circles in whitened coordinates
+  let x0: Vec;
+  let cg: Iterate[] = [];
+  let sd: Iterate[] = [];
+  let T: Sym = [1, 0, 1]; // A^{1/2}
+  let Tinv: Sym = [1, 0, 1];
+
+  const ctl = controls(root, (_p, key) => {
+    if (key === 'fn' || key === 'kappa' || key === 'theta') setObjective(key === 'fn');
+    else recompute();
+  });
+
+  const whitened = () => obj.id === 'quadratic' && (ctl.read().whiten as boolean);
+  /** maps an x-space point to whatever coordinates are being displayed */
+  const M = (x: Vec): Vec => (whitened() ? symMul(T, sub(x, obj.xstar)) : x);
+  /** maps an x-space direction likewise */
+  const Md = (d: Vec): Vec => (whitened() ? symMul(T, d) : d);
+
+  function setObjective(resetStart: boolean) {
+    const p = ctl.read();
+    obj = objective(p.fn as string, p.kappa as number, p.theta as number);
+    root.querySelectorAll<HTMLElement>('[data-only]').forEach((el) => (el.style.display = el.dataset.only === p.fn ? '' : 'none'));
+    if (resetStart || !x0) x0 = obj.start;
+    if (obj.id === 'quadratic') {
+      T = symSqrt(obj.hess(obj.xstar));
+      Tinv = symInv(T);
+    }
+    csX = contours(obj.f, padded(obj.view));
+    recompute();
+  }
+
+  function recompute() {
+    const p = ctl.read();
+    const ls = { kind: p.ls as LineSearch, alpha: 1, c1: 1e-4, c2: 0.1 };
+    cg = conjugateGradient(obj, x0, ls, p.beta as 'FR' | 'PR' | 'HS', 150);
+    sd = p.sd ? gradientDescent(obj, x0, ls, 150) : [];
+    if (whitened()) {
+      // fixed view: the image of the usual x-view, so dragging feels stable
+      const v = obj.view;
+      const corners: Vec[] = [[v.x[0], v.y[0]], [v.x[1], v.y[0]], [v.x[0], v.y[1]], [v.x[1], v.y[1]]];
+      const R = Math.max(1, ...corners.map((c) => norm(M(c)))) * 0.75;
+      const view: View = { x: [-R * (4 / 3), R * (4 / 3)], y: [-R, R] };
+      main.setView(view);
+      csZ = contours((z) => 0.5 * dot(z, z), padded(view), { n: 80 });
+    } else {
+      main.setView(obj.view);
+    }
+    const k = Math.min(play.k, maxK());
+    play.set(k === 0 ? Math.min(maxK(), 2) : k);
+  }
+
+  const maxK = () => Math.max(cg.length, sd.length) - 1;
+
+  const play = player(root, {
+    max: maxK,
+    fps: 3,
+    onFrame: () => {
+      main.redraw();
+      conv.redraw();
+      report();
+    },
+  });
+
+  main.handle(
+    () => M(x0),
+    (p) => {
+      x0 = whitened() ? add(obj.xstar, symMul(Tinv, p)) : p;
+      recompute();
+    },
+  );
+
+  const cut3 = (pts: Iterate[], k: number) => pts.slice(0, Math.min(k, pts.length - 1) + 1).map((it) => it.x);
+  add3DToggle(root, main, (t) =>
+    !obj
+      ? null
+      : {
+          obj,
+          view: obj.view,
+          paths: [{ pts: cut3(sd, play.k), color: t.series[1] }, { pts: cut3(cg, play.k), color: t.series[0] }].filter((p) => p.pts.length),
+          start: x0,
+          setStart: (p) => {
+            x0 = p;
+            recompute();
+          },
+        },
+  );
+
+  const at = (path: Iterate[], k: number) => path[Math.min(k, path.length - 1)];
+
+  function drawPath(path: Iterate[], k: number, color: string) {
+    const pts = path.slice(0, k + 1).map((it) => M(it.x));
+    main.polyline(pts, { color, width: 2 });
+    pts.forEach((x, i) => main.dot(x, i === pts.length - 1 ? 4.5 : 2.5, color));
+  }
+
+  main.draw(() => {
+    if (!obj) return;
+    const t = main.theme;
+    const p = ctl.read();
+    const k = play.k;
+    drawContours(main, whitened() && csZ ? csZ : csX);
+    main.dot(M(obj.xstar), 3, t.muted);
+
+    const cur = at(cg, k);
+    if (obj.id === 'quadratic' && p.ellipse && cur.f > 1e-12) {
+      const r = Math.sqrt(2 * cur.f);
+      const pts = whitened() ? ellipse([1, 0, 1], [0, 0], r) : ellipse(obj.hess(cur.x), obj.xstar, r);
+      main.polyline(pts, { color: t.series[0], width: 1.25, dash: [5, 4], alpha: 0.8 });
+    }
+
+    if (sd.length) drawPath(sd, k, t.series[1]);
+    drawPath(cg, k, t.series[0]);
+
+    // current direction pₖ (full step) and previous direction pₖ₋₁ moved to xₖ
+    if (k < cg.length - 1 && cur.p && cur.alpha !== undefined) {
+      const step = Md([cur.p[0] * cur.alpha, cur.p[1] * cur.alpha]);
+      const L = norm(step);
+      if (L > 0) {
+        const prev = k > 0 ? cg[k - 1] : undefined;
+        if (prev?.p) {
+          const pd = Md(prev.p);
+          const len = Math.max(L, 50 * main.px);
+          main.arrow(M(cur.x), add(M(cur.x), [(pd[0] / norm(pd)) * len, (pd[1] / norm(pd)) * len]), { color: t.series[2], width: 2, dash: [4, 3] });
+        }
+        main.arrow(M(cur.x), add(M(cur.x), step), { color: t.series[0], width: 2.5 });
+      }
+    }
+    main.dot(M(x0), 6, t.strong, true);
+  });
+
+  conv.draw(() => {
+    if (!obj || !cg.length) return;
+    const t = conv.theme;
+    const series: Series[] = [{ values: cg.map((it) => it.f - obj.fstar), color: t.series[0] }];
+    if (sd.length) series.push({ values: sd.map((it) => it.f - obj.fstar), color: t.series[1] });
+    convergence(conv, series, { k: play.k, ylabel: 'f(xₖ) − f*' });
+  });
+
+  function report() {
+    const k = play.k;
+    const it = at(cg, k);
+    let conj = '';
+    const prev = k > 0 ? cg[k - 1] : undefined;
+    if (prev?.p && it.p && k < cg.length - 1) {
+      const H = obj.hess(it.x);
+      const a = it.p;
+      const b = prev.p;
+      const pAp = dot(a, symMul(H, b)) / Math.sqrt(dot(a, symMul(H, a)) * dot(b, symMul(H, b)));
+      const cos = dot(a, b) / (norm(a) * norm(b));
+      conj = `<br>cos∠(pₖ, pₖ₋₁) = ${fmt(cos)} · A-cosine pₖᵀApₖ₋₁ / (‖pₖ‖_A‖pₖ₋₁‖_A) = ${fmt(Math.abs(pAp) < 1e-12 ? 0 : pAp)}${obj.id === 'quadratic' ? '' : ' (A = ∇²f(xₖ))'}`;
+    }
+    const sdIt = sd.length ? at(sd, k) : undefined;
+    const sdPrev = sd.length && k > 0 && k < sd.length - 1 ? sd[k - 1] : undefined;
+    const sdCos = sdPrev?.p && sdIt?.p ? ` · cos∠(dₖ, dₖ₋₁) = ${fmt(Math.abs(dot(sdIt.p, sdPrev.p) / (norm(sdIt.p) * norm(sdPrev.p))) < 1e-9 ? 0 : dot(sdIt.p, sdPrev.p) / (norm(sdIt.p) * norm(sdPrev.p)))}` : '';
+    out(
+      root,
+      'readout',
+      `k = ${k} · CG: ${Math.min(k, cg.length - 1)} / ${cg.length - 1} steps, f − f* = ${fmt(it.f - obj.fstar)}, ‖∇f‖ = ${fmt(norm(it.g))}` +
+        (sdIt ? `<br>SD: ${Math.min(k, sd.length - 1)} / ${sd.length - 1} steps, f − f* = ${fmt(sdIt.f - obj.fstar)}${sdCos}` : '') +
+        conj,
+    );
+  }
+
+  setObjective(true);
+</script>

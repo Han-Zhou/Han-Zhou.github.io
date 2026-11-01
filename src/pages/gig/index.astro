@@ -1,0 +1,27 @@
+---
+import { getCollection } from 'astro:content';
+import PostList from '../../components/PostList.astro';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { formatDate } from '../../lib/content';
+
+const notes = (await getCollection('notes', ({ data }) => data.status === 'published'))
+  .sort((a, b) => b.data.date.valueOf() - a.data.date.valueOf());
+---
+
+<BaseLayout
+  title="Gig — Han Zhou"
+  description="Working notes from things Han Zhou has built, studied, or broken."
+>
+  <h1>Gig</h1>
+  <p class="muted">Notes taken while testing an idea, understanding a system, or finding out exactly where it gives way.</p>
+
+  <h2 class="section-title" id="notes">Notes</h2>
+  <PostList
+    items={notes.map((entry) => ({
+      href: `/gig/notes/${entry.id}/`,
+      title: entry.data.title,
+      date: formatDate(entry.data.date),
+      summary: entry.data.description,
+    }))}
+  />
+</BaseLayout>

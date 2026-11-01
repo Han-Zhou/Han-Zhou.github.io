@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://han-zhou.github.io/sitemap.xml

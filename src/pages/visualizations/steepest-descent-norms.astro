@@ -1,0 +1,307 @@
+---
+import VizLayout from '../../layouts/VizLayout.astro';
+import { tex } from '../../lib/tex';
+---
+
+<VizLayout
+  title="Steepest descent under different norms"
+  topic="Optimization"
+  description="Interactive steepest descent with ℓ1, ℓ2, ℓ∞, general ℓp, and quadratic norms: the unit ball decides the direction."
+>
+  <p>
+    “Steepest” only makes sense once you say how you measure the length of a step. Given a norm <Fragment set:html={tex(String.raw`\|\cdot\|`)} />, the <em>normalized steepest descent direction</em> is the unit
+    step that decreases the linear approximation of <Fragment set:html={tex('f')} /> the most:
+  </p>
+  <Fragment set:html={tex(String.raw`\Delta x_{\text{nsd}} = \operatorname*{argmin}_{\|v\| \le 1} \nabla f(x)^\top v, \qquad \Delta x_{\text{sd}} = \|\nabla f(x)\|_*\, \Delta x_{\text{nsd}},`, true)} />
+  <p>
+    where <Fragment set:html={tex(String.raw`\|\cdot\|_*`)} /> is the dual norm, so that <Fragment set:html={tex(String.raw`\nabla f^\top \Delta x_{\text{sd}} = -\|\nabla f\|_*^2`)} />. Geometrically:
+    slide the line orthogonal to <Fragment set:html={tex(String.raw`\nabla f`)} /> in the direction of <Fragment set:html={tex(String.raw`-\nabla f`)} /> until it last touches the unit ball. The touching point is <Fragment set:html={tex(String.raw`\Delta x_{\text{nsd}}`)} />, and that line is a supporting hyperplane of the ball.
+    Only the Euclidean ball makes this point point straight down the gradient.
+  </p>
+
+  <div class="viz" id="sdn">
+    <div class="viz-panels viz-panels--2">
+      <div class="viz-panel">
+        <p class="viz-panel__title">Iterates on the contours of f</p>
+        <canvas data-c="main" class="square"></canvas>
+      </div>
+      <div class="viz-panel">
+        <p class="viz-panel__title">Unit ball of the norm at the current iterate</p>
+        <canvas data-c="ball" class="square"></canvas>
+      </div>
+    </div>
+    <ul class="viz-legend" data-out="legend"></ul>
+    <p class="viz-hint">Drag the hollow point to move the starting point.</p>
+    <div class="viz-controls">
+      <label>Function
+        <select data-k="fn">
+          <option value="quadratic">Quadratic</option>
+          <option value="lse">Exponential bowl</option>
+          <option value="rosenbrock">Rosenbrock</option>
+          <option value="himmelblau">Himmelblau</option>
+        </select>
+      </label>
+      <label data-show="fn=quadratic">κ <input type="range" data-k="kappa" min="1" max="50" step="1" value="10" /><output></output></label>
+      <label data-show="fn=quadratic">θ <input type="range" data-k="theta" min="0" max="180" step="5" value="30" /><output></output></label>
+      <label>Norm
+        <select data-k="norm">
+          <option value="lp">ℓₚ norm</option>
+          <option value="quad">Quadratic norm ‖v‖_P</option>
+        </select>
+      </label>
+      <label data-show="norm=lp">p <input type="range" data-k="ps" min="0" max="1" step="0.01" value="0" /><output data-out="pval"></output></label>
+      <label data-show="norm=quad">P
+        <select data-k="psrc">
+          <option value="custom">Custom ellipse</option>
+          <option value="hstart">Hessian at x₀</option>
+          <option value="hstar">Hessian at x*</option>
+        </select>
+      </label>
+      <label data-show="norm=quad,psrc=custom">κ_P <input type="range" data-k="pk" min="1" max="20" step="0.5" value="5" /><output></output></label>
+      <label data-show="norm=quad,psrc=custom">θ_P <input type="range" data-k="pt" min="0" max="180" step="5" value="120" /><output></output></label>
+      <label>Step size
+        <select data-k="ls">
+          <option value="exact">Exact line search</option>
+          <option value="armijo">Backtracking (α₀ = 1)</option>
+        </select>
+      </label>
+      <label><input type="checkbox" data-k="cmp" checked /> show ℓ₂ path</label>
+      <span class="viz-buttons">
+        <button data-act="reset">⏮</button>
+        <button data-act="back">‹</button>
+        <button data-act="play">Play</button>
+        <button data-act="step">›</button>
+        <button data-act="end">⏭</button>
+      </span>
+    </div>
+    <p class="viz-readout" data-out="readout"></p>
+  </div>
+
+  <h2>Three norms worth knowing</h2>
+  <ul>
+    <li>
+      <strong>ℓ₁ — coordinate descent.</strong> The ℓ₁ ball is a diamond, so the supporting line almost always touches a
+      corner: <Fragment set:html={tex(String.raw`\Delta x_{\text{nsd}} = -\operatorname{sign}(\partial_i f)\, e_i`)} /> for the
+      coordinate with the largest partial derivative. With an exact line search, this is greedy coordinate descent.
+    </li>
+    <li>
+      <strong>ℓ∞ — sign gradient.</strong> The ball is a square, the touching point is a corner, and <Fragment set:html={tex(String.raw`\Delta x_{\text{nsd}} = -\operatorname{sign}(\nabla f)`)} />: every coordinate
+      moves by the same amount and only the signs of the gradient matter (the idea behind signSGD).
+    </li>
+    <li>
+      <strong>Quadratic norm — preconditioning.</strong> With <Fragment set:html={tex(String.raw`\|v\|_P = (v^\top P v)^{1/2}`)} />, the step is <Fragment set:html={tex(String.raw`\Delta x_{\text{sd}} = -P^{-1}\nabla f`)} />. This is ordinary gradient descent
+      after the change of variables <Fragment set:html={tex(String.raw`\bar x = P^{1/2} x`)} />. Choosing <Fragment set:html={tex(String.raw`P = \nabla^2 f`)} /> gives Newton’s method, whose unit ball matches the shape of the
+      level sets.
+    </li>
+  </ul>
+
+</VizLayout>
+
+<script>
+  import { Plot, contours, drawContours, controls, player, out, fmt, norm, scale, add, dot, type Vec, type ContourSet, type View } from '../../viz/core';
+  import { add3DToggle } from '../../viz/view3d';
+  import { objective, quadratic, symEig, ellipse, type Objective, type Sym } from '../../viz/functions';
+  import { descent, gradientDescent, type Iterate } from '../../viz/optim';
+  import { lpDirection, quadDirection, lpBall, makePD, sliderToP, type SteepestDir } from '../../viz/norms';
+
+  const root = document.getElementById('sdn')!;
+  const main = new Plot(root.querySelector<HTMLCanvasElement>('[data-c="main"]')!, { x: [-4, 4], y: [-4, 4] });
+  const ball = new Plot(root.querySelector<HTMLCanvasElement>('[data-c="ball"]')!, { x: [-1.6, 1.6], y: [-1.6, 1.6] });
+
+  let obj: Objective;
+  let cs: ContourSet;
+  let x0: Vec;
+  let path: Iterate[] = [];
+  let l2path: Iterate[] = [];
+  let P: Sym = [1, 0, 1];
+  let shifted = false;
+  let p = 1;
+
+  const ctl = controls(root, (_p, key) => {
+    if (key === 'fn' || key === 'kappa' || key === 'theta') setObjective(key === 'fn');
+    else recompute();
+  });
+
+  function syncVisibility() {
+    const prm = ctl.read();
+    root.querySelectorAll<HTMLElement>('[data-show]').forEach((el) => {
+      const ok = el.dataset.show!.split(',').every((c) => {
+        const [k, v] = c.split('=');
+        return String(prm[k]) === v;
+      });
+      el.style.display = ok ? '' : 'none';
+    });
+  }
+
+  const padded = (v: View): View => {
+    const w = v.x[1] - v.x[0];
+    const h = v.y[1] - v.y[0];
+    const m = Math.max(w, h);
+    return { x: [v.x[0] - m * 0.4, v.x[1] + m * 0.4], y: [v.y[0] - m * 0.4, v.y[1] + m * 0.4] };
+  };
+
+  function setObjective(resetStart: boolean) {
+    const prm = ctl.read();
+    obj = objective(prm.fn as string, prm.kappa as number, prm.theta as number);
+    if (resetStart || !x0) x0 = obj.start;
+    main.setView(obj.view);
+    cs = contours(obj.f, padded(obj.view));
+    recompute();
+  }
+
+  /** Steepest direction for the current norm at gradient g. */
+  function direction(g: Vec): SteepestDir {
+    return ctl.read().norm === 'lp' ? lpDirection(g, p) : quadDirection(g, P);
+  }
+
+  function recompute() {
+    syncVisibility();
+    const prm = ctl.read();
+    p = sliderToP(prm.ps as number);
+    out(root, 'pval', Number.isFinite(p) ? fmt(p) : '∞');
+    shifted = false;
+    if (prm.norm === 'quad') {
+      if (prm.psrc === 'custom') P = quadratic(prm.pk as number, prm.pt as number).hess([0, 0]);
+      else {
+        const r = makePD(obj.hess(prm.psrc === 'hstart' ? x0 : obj.xstar));
+        P = r.P;
+        shifted = r.shifted;
+      }
+    }
+    const ls = { kind: prm.ls === 'exact' ? ('exact' as const) : ('armijo' as const), alpha: 1, c1: 1e-4, rho: 0.5 };
+    path = descent(
+      obj,
+      x0,
+      (it) => {
+        const d = direction(it.g);
+        return scale(d.nsd, d.dual);
+      },
+      ls,
+      150,
+    );
+    l2path = gradientDescent(obj, x0, ls, 150);
+    const k = Math.min(play.k, path.length - 1);
+    play.set(k === 0 ? Math.min(path.length - 1, 10) : k);
+    legend();
+  }
+
+  const play = player(root, {
+    max: () => path.length - 1,
+    fps: 5,
+    onFrame: () => {
+      main.redraw();
+      ball.redraw();
+      report();
+    },
+  });
+
+  main.handle(
+    () => x0,
+    (q) => {
+      x0 = q;
+      recompute();
+    },
+  );
+
+  const cut3 = (pts: Iterate[], k: number) => pts.slice(0, Math.min(k, pts.length - 1) + 1).map((it) => it.x);
+  add3DToggle(root, main, (t) =>
+    !obj
+      ? null
+      : {
+          obj,
+          view: obj.view,
+          paths: [...(ctl.read().cmp ? [{ pts: cut3(l2path, play.k), color: t.muted, width: 1.5, dashed: true }] : []), { pts: cut3(path, play.k), color: t.series[0] }].filter((p) => p.pts.length),
+          start: x0,
+          setStart: (p) => {
+            x0 = p;
+            recompute();
+          },
+        },
+  );
+
+  main.draw(() => {
+    if (!obj) return;
+    const t = main.theme;
+    drawContours(main, cs);
+    main.dot(obj.xstar, 3, t.muted);
+    const k = play.k;
+    if (ctl.read().cmp) {
+      const l2 = l2path.slice(0, k + 1).map((it) => it.x);
+      main.polyline(l2, { color: t.muted, width: 1.5, dash: [4, 4] });
+    }
+    const shown = path.slice(0, k + 1).map((it) => it.x);
+    main.polyline(shown, { color: t.series[0], width: 2 });
+    shown.forEach((x, i) => main.dot(x, i === k ? 4.5 : 2.5, t.series[0]));
+    const cur = path[k];
+    if (cur && norm(cur.g) > 0) {
+      const L = 50 * main.px;
+      main.arrow(cur.x, add(cur.x, scale(cur.g, -L / norm(cur.g))), { color: t.series[1], width: 2 });
+      const d = direction(cur.g).nsd;
+      if (norm(d) > 0) main.arrow(cur.x, add(cur.x, scale(d, L / norm(d))), { color: t.series[0], width: 2.5 });
+    }
+    main.dot(x0, 6, t.strong, true);
+  });
+
+  ball.draw(() => {
+    if (!obj || !path.length) return;
+    const t = ball.theme;
+    const prm = ctl.read();
+    ball.axes({ ticks: false });
+    // Euclidean reference circle
+    ball.polyline(ellipse([1, 0, 1], [0, 0]), { color: t.border, width: 1, dash: [3, 4] });
+
+    // unit ball of the chosen norm (quadratic balls are rescaled to fit: only the shape matters)
+    let shape: Vec[];
+    let Pd: Sym = P;
+    if (prm.norm === 'lp') shape = lpBall(p);
+    else {
+      const lmin = symEig(P)[1];
+      Pd = [P[0] / lmin, P[1] / lmin, P[2] / lmin];
+      shape = ellipse(Pd, [0, 0]);
+    }
+    ball.polygon(shape, t.fill[0], { color: t.series[0], width: 1.75 });
+
+    const g = path[play.k].g;
+    if (norm(g) === 0) return;
+    const d = prm.norm === 'lp' ? lpDirection(g, p) : quadDirection(g, Pd);
+    const v = d.nsd;
+    // supporting line {u : gᵀu = gᵀv}, orthogonal to g
+    ball.infiniteLine(v, [-g[1], g[0]], { color: t.muted, width: 1.25, dash: [6, 4] });
+    ball.arrow([0, 0], scale(g, -1.45 / norm(g)), { color: t.series[1], width: 2 });
+    ball.text(scale(g, -1.45 / norm(g)), '−∇f', { color: t.series[1], dx: 6, dy: -8 });
+    ball.arrow([0, 0], v, { color: t.series[0], width: 2.5 });
+    ball.dot(v, 4, t.series[0]);
+    ball.text(v, 'Δx_nsd', { color: t.series[0], dx: 8, dy: 10 });
+  });
+
+  function legend() {
+    const t = main.theme;
+    const items = [
+      [t.series[0], 'steepest descent in the chosen norm'],
+      [t.series[1], '−∇f (direction only)'],
+    ];
+    if (ctl.read().cmp) items.push([t.muted, 'ℓ₂ steepest descent (gradient descent)']);
+    out(root, 'legend', items.map(([c, s]) => `<li><i style="color:${c}"></i>${s}</li>`).join(''));
+  }
+
+  function report() {
+    const it = path[play.k];
+    if (!it) return;
+    const prm = ctl.read();
+    const d = norm(it.g) > 0 ? direction(it.g) : { nsd: [0, 0] as Vec, dual: 0 };
+    const cosang = norm(it.g) > 0 && norm(d.nsd) > 0 ? -dot(d.nsd, it.g) / (norm(d.nsd) * norm(it.g)) : 1;
+    const ang = (Math.acos(Math.min(1, Math.max(-1, cosang))) * 180) / Math.PI;
+    const last = play.k === path.length - 1;
+    const status = last ? (norm(it.g) < 1e-6 ? ' · converged' : ' · iteration cap') : '';
+    const l2n = l2path.length - 1;
+    out(
+      root,
+      'readout',
+      `k = ${play.k} / ${path.length - 1}${status} (ℓ₂ needs ${l2n}${l2n === 150 ? '+' : ''})<br>` +
+        `x = (${fmt(it.x[0])}, ${fmt(it.x[1])}) · f = ${fmt(it.f)} · ‖∇f‖_* = ${fmt(d.dual)} · angle(Δx_nsd, −∇f) = ${fmt(ang, 3)}°` +
+        (prm.norm === 'quad' && shifted ? '<br>Hessian was indefinite there; shifted to make P positive definite.' : ''),
+    );
+  }
+
+  setObjective(true);
+</script>

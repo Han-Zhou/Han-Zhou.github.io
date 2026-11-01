@@ -1,33 +1,40 @@
 ---
+import { getCollection } from 'astro:content';
+import PostList from '../components/PostList.astro';
 import BaseLayout from '../layouts/BaseLayout.astro';
+import { formatDate } from '../lib/content';
+
+const writing = (await getCollection('writing', ({ data }) => data.status === 'published'))
+  .sort((a, b) => b.data.date.valueOf() - a.data.date.valueOf());
+const notes = (await getCollection('notes', ({ data }) => data.status === 'published'))
+  .sort((a, b) => b.data.date.valueOf() - a.data.date.valueOf());
 ---
 
-<BaseLayout bodyClass="home-page">
-  <main id="main-content" class="home-poster">
-    <p class="home-panel home-rail home-rail--left">Han studies math and computer science</p>
+<BaseLayout>
+  <p>
+    Hi I'm Han :)) I'm studying math and computer science.
+  </p>
+  <p>
+    I like zoning out, learning things that are mostly useless, playing soccer, and doing
+    calisthenics.
+  </p>
+  <p>Check out some fun <a href="/visualizations/">visualizations</a>!</p>
 
-    <section class="home-panel home-name" aria-labelledby="home-title">
-      <h1 id="home-title"><span>Han</span><span>Zhou</span></h1>
-    </section>
+  <h2 class="section-title">Scribbles</h2>
+  <PostList
+    items={writing.map((entry) => ({
+      href: `/scribbles/${entry.id}/`,
+      title: entry.data.title,
+      date: formatDate(entry.data.date),
+    }))}
+  />
 
-    <a class="home-panel home-panel--paper home-link home-link--paper home-link--work" href="/work/">
-      <span>Work</span><span>01</span>
-    </a>
-    <a class="home-panel home-link home-link--writing" href="/writing/">
-      <span>Writing</span><span>02</span>
-    </a>
-    <p class="home-panel home-likes">likes zoning out, learning stuff that are mostly useless, playing soccer, doing calisthenics</p>
-    <a class="home-panel home-link home-link--contact" href="/about/">
-      <span>Contact</span><span>03</span>
-    </a>
-    <section class="home-panel home-panel--paper home-interests">
-      <h2>Interests</h2>
-      <p class="placeholder-field">[Research interests to be added]</p>
-      <p class="placeholder-field">[Technical interests to be added]</p>
-      <p class="placeholder-field">[Personal interests to be added]</p>
-    </section>
-    <a class="home-panel home-panel--paper home-link home-link--paper home-link--resume" href="/resume/">
-      <span>Résumé</span><span>04 / soon</span>
-    </a>
-  </main>
+  <h2 class="section-title">Gig</h2>
+  <PostList
+    items={notes.map((entry) => ({
+      href: `/gig/notes/${entry.id}/`,
+      title: entry.data.title,
+      date: formatDate(entry.data.date),
+    }))}
+  />
 </BaseLayout>

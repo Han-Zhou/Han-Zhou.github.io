@@ -1,27 +1,48 @@
 ---
 const path = Astro.url.pathname;
 const links = [
-  { href: '/work/', label: 'Work' },
-  { href: '/writing/', label: 'Writing' },
+  { href: '/scribbles/', label: 'Scribbles' },
+  { href: '/gig/', label: 'Gig' },
   { href: '/about/', label: 'Contact' },
   { href: '/resume/', label: 'Résumé' },
 ];
 
-const isCurrent = (href: string) => path === href || (href !== '/' && path.startsWith(href));
+const isCurrent = (href: string) => path.startsWith(href);
 ---
 
-<header class="site-nav-wrap">
-  <nav class="site-nav" aria-label="Primary navigation">
-    <a class="site-nav__brand" href="/" aria-label="Han Zhou, home">
-      <span aria-hidden="true">HZ</span>
-      <span class="sr-only">Han Zhou</span>
-    </a>
-    <div class="site-nav__links">
+<header class="site-header">
+  <a class="site-header__name" href="/">han-zhou.github.io</a>
+  <div class="site-header__right">
+    <nav aria-label="Primary navigation">
       {links.map((link) => (
         <a href={link.href} aria-current={isCurrent(link.href) ? 'page' : undefined}>
           {link.label}
         </a>
       ))}
-    </div>
-  </nav>
+    </nav>
+    <button class="theme-toggle" type="button" aria-label="Toggle light and dark mode" title="Toggle light and dark mode">
+      <svg class="eye-open" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z" />
+        <circle cx="12" cy="12" r="3" />
+      </svg>
+      <svg class="eye-closed" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M2 10s3.5 6 10 6 10-6 10-6" />
+        <path d="M5 14.5 3.5 17M9.5 16l-.5 3M14.5 16l.5 3M19 14.5l1.5 2.5" />
+      </svg>
+    </button>
+  </div>
 </header>
+
+<script>
+  const root = document.documentElement;
+  const dark = matchMedia('(prefers-color-scheme: dark)');
+
+  document.querySelector('.theme-toggle')?.addEventListener('click', () => {
+    const current = root.dataset.theme ?? (dark.matches ? 'dark' : 'light');
+    const next = current === 'dark' ? 'light' : 'dark';
+    root.dataset.theme = next;
+    try {
+      localStorage.setItem('theme', next);
+    } catch {}
+  });
+</script>

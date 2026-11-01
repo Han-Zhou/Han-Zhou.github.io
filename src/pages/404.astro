@@ -1,29 +1,13 @@
 ---
-import SiteNav from '../components/SiteNav.astro';
 import BaseLayout from '../layouts/BaseLayout.astro';
 ---
 
 <BaseLayout
   title="404 — Page Not Found — Han Zhou"
   description="That page does not exist."
-  bodyClass="paper-page"
   index={false}
   canonicalPath="/404.html"
 >
-  <SiteNav />
-  <main id="main-content" class="utility-shell">
-    <section class="utility-panel">
-      <div class="utility-panel__main">
-        <p class="placeholder-stamp">Error / 404</p>
-        <h1>This rectangle is empty.</h1>
-        <p>The requested page could not be found. The useful rectangles are still where you left them.</p>
-        <div class="utility-links">
-          <a href="/">Go home</a>
-          <a href="/work/">See work</a>
-          <a href="/writing/">Read writing</a>
-        </div>
-      </div>
-      <div class="utility-panel__aside halftone" aria-hidden="true"></div>
-    </section>
-  </main>
+  <h1>Page not found</h1>
+  <p>That page doesn't exist. Try the <a href="/">home page</a>.</p>
 </BaseLayout>

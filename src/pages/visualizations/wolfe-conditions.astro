@@ -1,0 +1,377 @@
+---
+import VizLayout from '../../layouts/VizLayout.astro';
+import { tex } from '../../lib/tex';
+---
+
+<VizLayout
+  title="Wolfe conditions for line search"
+  topic="Optimization"
+  description="Interactive Wolfe conditions: sufficient decrease and curvature conditions drawn on the line-search function, with acceptable step lengths shaded."
+>
+  <p>
+    A line search picks a step length along a descent direction <Fragment set:html={tex('p')} />. Everything happens on
+    the one-dimensional slice
+  </p>
+  <Fragment set:html={tex(String.raw`\varphi(\alpha) = f(x + \alpha p), \qquad \varphi'(0) = \nabla f(x)^\top p < 0.`, true)} />
+  <p>
+    Minimizing <Fragment set:html={tex(String.raw`\varphi`)} /> exactly is wasteful. The Wolfe conditions instead accept
+    any step that is <em>good enough</em>, for constants <Fragment set:html={tex(String.raw`0 < c_1 < c_2 < 1`)} />:
+  </p>
+  <Fragment set:html={tex(String.raw`\begin{aligned}
+    &\text{sufficient decrease (Armijo):} && \varphi(\alpha) \le \varphi(0) + c_1 \alpha\, \varphi'(0), \\
+    &\text{curvature:} && \varphi'(\alpha) \ge c_2\, \varphi'(0), \\
+    &\text{strong curvature:} && |\varphi'(\alpha)| \le c_2\, |\varphi'(0)|.
+  \end{aligned}`, true)} />
+  <p>
+    The first rules out steps that are too long: <Fragment set:html={tex(String.raw`\varphi`)} /> must lie below a line
+    that is a little flatter than the tangent. The second rules out steps that are too short: the slope must have
+    flattened out by a factor <Fragment set:html={tex('c_2')} />. The strong version also rejects steps where <Fragment set:html={tex(String.raw`\varphi`)} /> is already rising steeply.
+  </p>
+
+  <div class="viz" id="wolfe">
+    <div class="viz-panels">
+      <div class="viz-panel">
+        <p class="viz-panel__title">The ray x + αp on the contours of f</p>
+        <canvas data-c="main"></canvas>
+      </div>
+      <div class="viz-panel">
+        <p class="viz-panel__title">φ(α) = f(x + αp)</p>
+        <canvas data-c="phi" class="wide"></canvas>
+      </div>
+    </div>
+    <ul class="viz-legend" data-out="legend"></ul>
+    <p class="viz-hint">Drag the hollow point to move x and the small arrow tip to change p. Hover over the φ plot to inspect a step length.</p>
+    <div class="viz-controls">
+      <label>Function
+        <select data-k="fn">
+          <option value="quadratic">Quadratic</option>
+          <option value="lse">Exponential bowl</option>
+          <option value="rosenbrock">Rosenbrock</option>
+          <option value="himmelblau">Himmelblau</option>
+        </select>
+      </label>
+      <label data-show="fn=quadratic">κ <input type="range" data-k="kappa" min="1" max="50" step="1" value="10" /><output></output></label>
+      <label data-show="fn=quadratic">θ <input type="range" data-k="theta" min="0" max="180" step="5" value="30" /><output></output></label>
+      <label>Conditions
+        <select data-k="cond">
+          <option value="weak">Wolfe</option>
+          <option value="strong">Strong Wolfe</option>
+        </select>
+      </label>
+      <label>c₁ <input type="range" data-k="c1" data-fmt="exp" min="-4" max="-0.31" step="0.01" value="-0.7" /><output></output></label>
+      <label>c₂ <input type="range" data-k="c2" min="0.01" max="0.99" step="0.01" value="0.6" /><output></output></label>
+      <label>Ray length <input type="range" data-k="ray" min="0.5" max="8" step="0.1" value="2.5" /><output></output></label>
+      <label>Line search
+        <select data-k="ls">
+          <option value="armijo">Backtracking (ρ = ½)</option>
+          <option value="wolfe">Strong Wolfe (bracket + zoom)</option>
+          <option value="none">None</option>
+        </select>
+      </label>
+      <label data-show="ls=armijo">α₀ <input type="range" data-k="a0" min="0.05" max="1" step="0.01" value="0.95" /><output></output> × max</label>
+      <label data-show="ls=wolfe">α₁ <input type="range" data-k="a1" min="0.05" max="1" step="0.01" value="0.15" /><output></output> × max</label>
+      <label><input type="checkbox" data-k="follow" checked /> p = −∇f</label>
+      <span class="viz-buttons"><button data-act="resetp">Reset p to −∇f</button></span>
+    </div>
+    <p class="viz-readout" data-out="readout"></p>
+  </div>
+
+  <h2>Things to try</h2>
+  <ul>
+    <li>Raise <Fragment set:html={tex(String.raw`c_1`)} /> to about 0.3. A deep minimum of <Fragment set:html={tex(String.raw`\varphi`)} /> far along the ray can now fail sufficient decrease.</li>
+    <li>Set <Fragment set:html={tex(String.raw`c_2`)} /> to about 0.1. The accepted set shrinks to points where <Fragment set:html={tex(String.raw`\varphi'(\alpha) \approx 0`)} />, so the line search must be more exact.</li>
+    <li>Push <Fragment set:html={tex(String.raw`c_2`)} /> down close to <Fragment set:html={tex(String.raw`c_1`)} />. This shows why the theory needs <Fragment set:html={tex(String.raw`0 < c_1 < c_2 < 1`)} />.</li>
+  </ul>
+</VizLayout>
+
+<script>
+  import { Plot, contours, drawContours, controls, out, fmt, norm, scale, add, sub, type Vec, type ContourSet, type View } from '../../viz/core';
+  import { objective, type Objective } from '../../viz/functions';
+  import { armijo, wolfe, phi as phiOf } from '../../viz/optim';
+
+  const root = document.getElementById('wolfe')!;
+  const main = new Plot(root.querySelector<HTMLCanvasElement>('[data-c="main"]')!, { x: [-4, 4], y: [-3, 3] });
+  const ph = new Plot(root.querySelector<HTMLCanvasElement>('[data-c="phi"]')!, { x: [0, 1], y: [0, 1] }, { equal: false });
+
+  const N = 600;
+  let obj: Objective;
+  let cs: ContourSet;
+  let x: Vec = [0, 0];
+  let p: Vec = [1, 0];
+  let tau = 1; // world length of the drawn arrow per unit of p
+  let hover: number | null = null;
+
+  interface State {
+    amax: number;
+    as: number[];
+    fs: number[];
+    ds: number[];
+    f0: number;
+    d0: number;
+    armijoOk: boolean[];
+    curvOk: boolean[];
+    both: boolean[];
+    trials: number[];
+    accepted: number | null;
+  }
+  let S: State | null = null;
+
+  const ctl = controls(root, (prm, key) => {
+    if (key === 'fn' || key === 'kappa' || key === 'theta') return setObjective(key === 'fn');
+    if (key === 'c1' || key === 'c2') {
+      const c1 = Math.pow(10, prm.c1 as number);
+      if ((prm.c2 as number) <= c1) ctl.set('c2', Math.min(0.99, Math.ceil((c1 + 0.01) * 100) / 100));
+    }
+    if (key === 'follow' && prm.follow) resetP();
+    update();
+  });
+
+  root.querySelector('[data-act="resetp"]')!.addEventListener('click', () => {
+    (root.querySelector('[data-k="follow"]') as HTMLInputElement).checked = true;
+    resetP();
+    update();
+  });
+
+  function syncVisibility() {
+    const prm = ctl.read();
+    root.querySelectorAll<HTMLElement>('[data-show]').forEach((el) => {
+      const ok = el.dataset.show!.split(',').every((c) => {
+        const [k, v] = c.split('=');
+        return String(prm[k]) === v;
+      });
+      el.style.display = ok ? '' : 'none';
+    });
+  }
+
+  const padded = (v: View): View => {
+    const w = v.x[1] - v.x[0];
+    const h = v.y[1] - v.y[0];
+    return { x: [v.x[0] - w * 0.4, v.x[1] + w * 0.4], y: [v.y[0] - h * 0.4, v.y[1] + h * 0.4] };
+  };
+
+  function setObjective(resetStart: boolean) {
+    const prm = ctl.read();
+    obj = objective(prm.fn as string, prm.kappa as number, prm.theta as number);
+    if (resetStart) x = obj.start;
+    main.setView(obj.view);
+    cs = contours(obj.f, padded(obj.view));
+    resetP();
+    update();
+  }
+
+  /** p = −∇f(x), drawn with an arrow a quarter of the view wide. */
+  function resetP() {
+    const g = obj.grad(x);
+    const gn = norm(g);
+    p = gn > 0 ? scale(g, -1) : [1, 0];
+    tau = (0.25 * (obj.view.x[1] - obj.view.x[0])) / (gn > 0 ? gn : 1);
+  }
+
+  /** Splits a boolean mask over the α grid into [start, end] intervals. */
+  function intervals(as: number[], mask: boolean[]) {
+    const res: [number, number][] = [];
+    let start: number | null = null;
+    mask.forEach((ok, i) => {
+      if (ok && start === null) start = as[i];
+      if ((!ok || i === mask.length - 1) && start !== null) {
+        res.push([start, ok ? as[i] : as[i - 1]]);
+        start = null;
+      }
+    });
+    return res;
+  }
+
+  function update() {
+    syncVisibility();
+    const prm = ctl.read();
+    const c1 = Math.pow(10, prm.c1 as number);
+    const c2 = prm.c2 as number;
+    const amax = (prm.ray as number) * tau;
+    const { f, d } = phiOf(obj, x, p);
+    const as: number[] = [];
+    const fs: number[] = [];
+    const ds: number[] = [];
+    for (let i = 0; i <= N; i++) {
+      const a = (amax * i) / N;
+      as.push(a);
+      fs.push(f(a));
+      ds.push(d(a));
+    }
+    const f0 = fs[0];
+    const d0 = ds[0];
+    const descent = d0 < 0;
+    const armijoOk = as.map((a, i) => descent && i > 0 && fs[i] <= f0 + c1 * a * d0);
+    const curvOk = ds.map((da, i) => descent && i > 0 && (prm.cond === 'strong' ? Math.abs(da) <= c2 * Math.abs(d0) : da >= c2 * d0));
+    const both = armijoOk.map((ok, i) => ok && curvOk[i]);
+
+    let trials: number[] = [];
+    let accepted: number | null = null;
+    if (descent && prm.ls === 'armijo') {
+      const r = armijo(obj, x, p, (prm.a0 as number) * amax, c1, 0.5);
+      trials = r.trials;
+      accepted = r.alpha;
+    } else if (descent && prm.ls === 'wolfe') {
+      const r = wolfe(obj, x, p, (prm.a1 as number) * amax, c1, c2);
+      trials = r.trials;
+      accepted = r.alpha;
+    }
+    S = { amax, as, fs, ds, f0, d0, armijoOk, curvOk, both, trials, accepted };
+
+    // φ view: keep φ(0) and the minimum in frame, leave a band at the bottom for the interval bars
+    const finite = fs.filter(Number.isFinite);
+    const lo = Math.min(...finite);
+    const span = Math.max(f0 - lo, Math.abs(d0) * amax * 0.25, 1e-9);
+    ph.setView({ x: [-0.03 * amax, amax * 1.03], y: [lo - 0.55 * span, f0 + 0.35 * span] });
+    main.redraw();
+    legend();
+    report();
+  }
+
+  main.handle(
+    () => x,
+    (q) => {
+      x = q;
+      if (ctl.read().follow) resetP();
+      update();
+    },
+  );
+  main.handle(
+    () => add(x, scale(p, tau)),
+    (q) => {
+      p = scale(sub(q, x), 1 / tau);
+      (root.querySelector('[data-k="follow"]') as HTMLInputElement).checked = false;
+      update();
+    },
+    12,
+  );
+
+  main.draw(() => {
+    if (!obj || !S) return;
+    const t = main.theme;
+    drawContours(main, cs);
+    main.dot(obj.xstar, 3, t.muted);
+    const at = (a: number) => add(x, scale(p, a));
+    // the ray, with acceptable steps highlighted
+    main.line(x, at(S.amax), { color: t.muted, width: 1.25 });
+    for (const [a, b] of intervals(S.as, S.both)) main.line(at(a), at(b), { color: t.series[2], width: 5, alpha: 0.85 });
+    // −∇f for reference when p has been dragged away from it
+    const g = obj.grad(x);
+    if (!ctl.read().follow && norm(g) > 0) main.arrow(x, add(x, scale(g, (-0.25 * (obj.view.x[1] - obj.view.x[0])) / norm(g))), { color: t.series[1], width: 1.5, dash: [4, 3] });
+    main.arrow(x, at(tau), { color: t.series[3], width: 2.5 });
+    S.trials.forEach((a, i) => {
+      if (a <= S!.amax * 1.001) main.dot(at(a), 3, t.strong);
+      if (i < 6 && a <= S!.amax) main.text(at(a), String(i + 1), { dx: 6, dy: -8, size: 11, color: t.strong });
+    });
+    if (S.accepted !== null) main.dot(at(S.accepted), 6, t.series[2], true);
+    if (hover !== null) main.dot(at(hover), 3.5, t.series[4]);
+    main.dot(add(x, scale(p, tau)), 5, t.series[3], true);
+    main.dot(x, 6, t.strong, true);
+  });
+
+  ph.draw(() => {
+    if (!S) return;
+    const t = ph.theme;
+    const ctx = ph.ctx;
+    const v = ph.getView();
+    const { as, fs, f0, d0, amax } = S;
+    const prm = ctl.read();
+    const c1 = Math.pow(10, prm.c1 as number);
+    const c2 = prm.c2 as number;
+
+    // acceptable set: full-height bands
+    for (const [a, b] of intervals(as, S.both)) {
+      ctx.fillStyle = t.fill[2];
+      ctx.fillRect(ph.X(a), 0, Math.max(1, ph.X(b) - ph.X(a)), ph.h - 46);
+    }
+    ph.line([0, v.y[0]], [0, v.y[1]], { color: t.border, width: 1 });
+    ph.line([0, f0], [amax, f0], { color: t.faint, width: 1 });
+
+    // reference lines through (0, φ(0))
+    ph.line([0, f0], [amax, f0 + d0 * amax], { color: t.muted, width: 1, dash: [2, 3] });
+    ph.line([0, f0], [amax, f0 + c1 * d0 * amax], { color: t.series[0], width: 1.75, dash: [6, 4] });
+    ph.line([0, f0], [amax, f0 + c2 * d0 * amax], { color: t.series[1], width: 1.5, dash: [3, 4] });
+
+    // φ itself
+    ph.polyline(as.map((a, i) => [a, fs[i]] as Vec), { color: t.strong, width: 2 });
+
+    // hover tangent
+    if (hover !== null) {
+      const i = Math.round((hover / amax) * N);
+      const a = as[i];
+      const s = S.ds[i];
+      const w = amax * 0.08;
+      ph.line([a, v.y[0]], [a, v.y[1]], { color: t.border, width: 1 });
+      ph.line([a - w, fs[i] - s * w], [a + w, fs[i] + s * w], { color: t.series[4], width: 2 });
+      ph.dot([a, fs[i]], 3.5, t.series[4]);
+    }
+
+    // line-search trials
+    S.trials.forEach((a, i) => {
+      if (a > amax * 1.001) {
+        ph.label(ph.w - 6, 4 + 14 * Math.min(i, 3), `trial ${i + 1}: α → off plot`, t.muted, 'right', 11);
+        return;
+      }
+      const fa = obj.f(add(x, scale(p, a)));
+      ph.dot([a, fa], 3, t.strong);
+      if (i < 6) ph.text([a, fa], String(i + 1), { dx: 5, dy: -9, size: 11, color: t.strong });
+    });
+    if (S.accepted !== null && S.accepted <= amax * 1.001) ph.dot([S.accepted, obj.f(add(x, scale(p, S.accepted)))], 6, t.series[2], true);
+
+    // condition bars
+    const rows: [string, boolean[], string][] = [
+      ['sufficient decrease', S.armijoOk, t.series[0]],
+      [prm.cond === 'strong' ? 'strong curvature' : 'curvature', S.curvOk, t.series[1]],
+      [prm.cond === 'strong' ? 'strong Wolfe' : 'Wolfe', S.both, t.series[2]],
+    ];
+    rows.forEach(([name, mask, color], r) => {
+      const y = ph.h - 40 + r * 13;
+      ctx.fillStyle = t.faint;
+      ctx.fillRect(ph.X(0), y, ph.X(amax) - ph.X(0), 6);
+      ctx.fillStyle = color;
+      for (const [a, b] of intervals(as, mask)) ctx.fillRect(ph.X(a), y, Math.max(1.5, ph.X(b) - ph.X(a)), 6);
+      ph.label(ph.X(amax) - 4, y - 3, name, t.muted, 'right', 10);
+    });
+  });
+
+  ph.onHover((q) => {
+    if (!S || !q || q[0] < 0 || q[0] > S.amax) hover = null;
+    else hover = q[0];
+    ph.redraw();
+    main.redraw();
+    report();
+  });
+
+  function legend() {
+    const t = main.theme;
+    const items: [string, string][] = [
+      [t.strong, 'φ(α)'],
+      [t.series[0], 'φ(0) + c₁αφ′(0)'],
+      [t.series[1], 'slope c₂φ′(0)'],
+      [t.muted, 'tangent φ(0) + αφ′(0)'],
+      [t.series[2], 'acceptable steps'],
+      [t.series[3], 'direction p'],
+    ];
+    out(root, 'legend', items.map(([c, s]) => `<li><i style="color:${c}"></i>${s}</li>`).join(''));
+  }
+
+  function report() {
+    if (!S) return;
+    const prm = ctl.read();
+    const lines: string[] = [];
+    lines.push(`φ(0) = ${fmt(S.f0)} · φ′(0) = ∇fᵀp = ${fmt(S.d0)}${S.d0 >= 0 ? ' · <b>p is not a descent direction</b>' : ''}`);
+    const iv = intervals(S.as, S.both).map(([a, b]) => `[${fmt(a)}, ${fmt(b)}]`);
+    if (S.d0 < 0) lines.push(`acceptable α: ${iv.length ? iv.join(' ∪ ') : 'none on this ray'}`);
+    if (prm.ls !== 'none' && S.d0 < 0 && S.accepted !== null) {
+      const i = Math.min(N, Math.round((S.accepted / S.amax) * N));
+      const okHere = S.accepted <= S.amax && S.both[i];
+      lines.push(`${prm.ls === 'armijo' ? 'backtracking' : 'strong Wolfe search'}: α = ${fmt(S.accepted)} after ${S.trials.length} trial${S.trials.length === 1 ? '' : 's'}${okHere ? ' · satisfies both conditions' : S.accepted <= S.amax ? ' · fails the curvature condition' : ''}`);
+    }
+    if (hover !== null) {
+      const i = Math.round((hover / S.amax) * N);
+      lines.push(`hover α = ${fmt(S.as[i])}: φ = ${fmt(S.fs[i])}, φ′ = ${fmt(S.ds[i])} · decrease ${S.armijoOk[i] ? '✓' : '✗'} · curvature ${S.curvOk[i] ? '✓' : '✗'}`);
+    }
+    out(root, 'readout', lines.join('<br>'));
+  }
+
+  setObjective(true);
+</script>

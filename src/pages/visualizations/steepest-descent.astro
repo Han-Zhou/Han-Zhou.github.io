@@ -1,0 +1,185 @@
+---
+import VizLayout from '../../layouts/VizLayout.astro';
+import { tex } from '../../lib/tex';
+---
+
+<VizLayout
+  title="Steepest descent"
+  topic="Optimization"
+  description="Interactive gradient descent with fixed, backtracking, Wolfe, and exact line searches on several test functions."
+>
+  <p>
+    Steepest descent picks the direction that decreases the objective fastest locally, the negative gradient, and then
+    decides how far to go:
+  </p>
+  <Fragment set:html={tex(String.raw`x_{k+1} = x_k - \alpha_k \nabla f(x_k).`, true)} />
+  <p>
+    The interesting part is the step size <Fragment set:html={tex(String.raw`\alpha_k`)} />. Too small and nothing
+    happens; too large and the iterates overshoot or diverge. Even with the <em>best</em> step — an exact line search — the
+    path zig-zags, because consecutive gradients are orthogonal: <Fragment set:html={tex(String.raw`\nabla f(x_{k+1})^\top \nabla f(x_k) = 0`)} />.
+  </p>
+
+  <div class="viz" id="sd">
+    <div class="viz-panels">
+      <div class="viz-panel"><canvas data-c="main"></canvas></div>
+      <div class="viz-panel"><canvas data-c="conv" class="short"></canvas></div>
+    </div>
+    <p class="viz-hint">Drag the hollow point to move the starting point.</p>
+    <div class="viz-controls">
+      <label>Function
+        <select data-k="fn">
+          <option value="quadratic">Quadratic</option>
+          <option value="lse">Exponential bowl</option>
+          <option value="rosenbrock">Rosenbrock</option>
+          <option value="himmelblau">Himmelblau</option>
+        </select>
+      </label>
+      <label data-only="quadratic">κ <input type="range" data-k="kappa" min="1" max="50" step="1" value="10" /><output></output></label>
+      <label data-only="quadratic">θ <input type="range" data-k="theta" min="0" max="180" step="5" value="30" /><output></output></label>
+      <label>Step size
+        <select data-k="ls">
+          <option value="exact">Exact line search</option>
+          <option value="armijo">Backtracking (Armijo)</option>
+          <option value="wolfe">Strong Wolfe</option>
+          <option value="fixed">Fixed α</option>
+        </select>
+      </label>
+      <label>α / α₀ <input type="range" data-k="alpha" data-fmt="exp" min="-3" max="0.5" step="0.05" value="-0.7" /><output></output></label>
+      <span class="viz-buttons">
+        <button data-act="reset">⏮</button>
+        <button data-act="back">‹</button>
+        <button data-act="play">Play</button>
+        <button data-act="step">›</button>
+        <button data-act="end">⏭</button>
+      </span>
+    </div>
+    <p class="viz-readout" data-out="readout"></p>
+  </div>
+
+  <h2>Things to try</h2>
+  <ul>
+    <li>Raise κ on the quadratic. The zig-zag gets worse, and the iteration count grows roughly like κ.</li>
+    <li>Drag the start point off the axes of the ellipses: consecutive steps meet at right angles. Drag it onto an eigenvector axis: one exact step reaches the minimizer.</li>
+    <li>Switch to Rosenbrock. Steepest descent moves very slowly along the curved valley.</li>
+  </ul>
+</VizLayout>
+
+<script>
+  import { Plot, contours, drawContours, controls, player, out, fmt, norm, scale, add, type Vec, type ContourSet } from '../../viz/core';
+  import { add3DToggle } from '../../viz/view3d';
+  import { objective, type Objective } from '../../viz/functions';
+  import { gradientDescent, type Iterate, type LineSearch } from '../../viz/optim';
+  import { convergence } from '../../viz/charts';
+
+  const root = document.getElementById('sd')!;
+  const main = new Plot(root.querySelector<HTMLCanvasElement>('[data-c="main"]')!, { x: [-4, 4], y: [-3, 3] });
+  const conv = new Plot(root.querySelector<HTMLCanvasElement>('[data-c="conv"]')!, { x: [0, 1], y: [0, 1] }, { equal: false });
+
+  let obj: Objective;
+  let cs: ContourSet;
+  let x0: Vec;
+  let path: Iterate[] = [];
+
+  const ctl = controls(root, (_p, key) => {
+    if (key === 'fn' || key === 'kappa' || key === 'theta') setObjective(key === 'fn');
+    else recompute();
+  });
+
+  function setObjective(resetStart: boolean) {
+    const p = ctl.read();
+    obj = objective(p.fn as string, p.kappa as number, p.theta as number);
+    root.querySelectorAll<HTMLElement>('[data-only]').forEach((el) => (el.style.display = el.dataset.only === p.fn ? '' : 'none'));
+    if (resetStart || !x0) x0 = obj.start;
+    main.setView(obj.view);
+    cs = contours(obj.f, padded(obj.view));
+    recompute();
+  }
+
+  // contour a slightly larger area than the view so canvas edges are covered
+  const padded = (v: { x: [number, number]; y: [number, number] }) => {
+    const w = v.x[1] - v.x[0];
+    const h = v.y[1] - v.y[0];
+    return { x: [v.x[0] - w * 0.4, v.x[1] + w * 0.4] as [number, number], y: [v.y[0] - h * 0.4, v.y[1] + h * 0.4] as [number, number] };
+  };
+
+  function recompute() {
+    const p = ctl.read();
+    const alpha = Math.pow(10, p.alpha as number);
+    path = gradientDescent(obj, x0, { kind: p.ls as LineSearch, alpha }, 150);
+    const k = Math.min(play.k, path.length - 1);
+    play.set(k === 0 ? Math.min(path.length - 1, 15) : k);
+  }
+
+  const play = player(root, {
+    max: () => path.length - 1,
+    fps: 5,
+    onFrame: () => {
+      main.redraw();
+      conv.redraw();
+      report();
+    },
+  });
+
+  main.handle(
+    () => x0,
+    (p) => {
+      x0 = p;
+      recompute();
+    },
+  );
+
+  const cut3 = (pts: Iterate[], k: number) => pts.slice(0, Math.min(k, pts.length - 1) + 1).map((it) => it.x);
+  add3DToggle(root, main, (t) =>
+    !obj
+      ? null
+      : {
+          obj,
+          view: obj.view,
+          paths: [{ pts: cut3(path, play.k), color: t.series[0] }].filter((p) => p.pts.length),
+          start: x0,
+          setStart: (p) => {
+            x0 = p;
+            recompute();
+          },
+        },
+  );
+
+  main.draw(() => {
+    if (!obj) return;
+    const t = main.theme;
+    drawContours(main, cs);
+    main.dot(obj.xstar, 3, t.muted);
+    const k = play.k;
+    const shown = path.slice(0, k + 1).map((it) => it.x);
+    main.polyline(shown, { color: t.series[0], width: 2 });
+    shown.forEach((x, i) => main.dot(x, i === k ? 4.5 : 2.5, t.series[0]));
+    const cur = path[k];
+    if (cur && norm(cur.g) > 0) {
+      // unit-length (on screen) negative gradient arrow
+      const L = 60 * main.px;
+      main.arrow(cur.x, add(cur.x, scale(cur.g, -L / norm(cur.g))), { color: t.series[1], width: 2 });
+    }
+    main.dot(x0, 6, t.strong, true);
+  });
+
+  conv.draw(() => {
+    if (!obj || !path.length) return;
+    convergence(conv, [{ values: path.map((it) => it.f - obj.fstar), color: conv.theme.series[0] }], {
+      k: play.k,
+      ylabel: obj.convex || obj.id === 'rosenbrock' ? 'f(xₖ) − f*' : 'f(xₖ) − 0',
+    });
+  });
+
+  function report() {
+    const it = path[play.k];
+    if (!it) return;
+    const status = play.k === path.length - 1 ? (norm(it.g) < 1e-6 ? ' · converged' : !Number.isFinite(it.f) || norm(it.x) > 1e5 ? ' · diverged' : ' · iteration cap') : '';
+    out(
+      root,
+      'readout',
+      `k = ${play.k} / ${path.length - 1}${status}<br>x = (${fmt(it.x[0])}, ${fmt(it.x[1])}) · f = ${fmt(it.f)} · ‖∇f‖ = ${fmt(norm(it.g))}${it.alpha !== undefined ? ` · αₖ = ${fmt(it.alpha)}` : ''}`,
+    );
+  }
+
+  setObjective(true);
+</script>

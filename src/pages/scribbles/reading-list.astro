@@ -1,0 +1,34 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+
+// Things by other people worth reading. Add entries here; they show in this order.
+const readingList = [
+  {
+    title: 'Using group theory to explore the space of positional encodings for attention',
+    source: 'Jane Street Tech Blog',
+    href: 'https://blog.janestreet.com/using-group-theory-to-explore-positional-encodings-attention/',
+  },
+  {
+    title: '44% on ARC-AGI-1 in 67 cents',
+    source: 'Mithil Vakde',
+    href: 'https://mvakde.github.io/blog/44-on-arc-1/',
+  },
+];
+---
+
+<BaseLayout
+  title="Reading list — Han Zhou"
+  description="Articles and posts by other people that Han Zhou thinks are worth reading."
+>
+  <p class="article-meta" style="margin: 0 0 4px;"><a href="/scribbles/">Scribbles</a></p>
+  <h1>Reading list</h1>
+  <p class="muted">Things by other people that are worth your time.</p>
+  <ul class="reading-list">
+    {readingList.map((item) => (
+      <li>
+        <a href={item.href} target="_blank" rel="noopener">{item.title}</a>
+        <p>{item.source}</p>
+      </li>
+    ))}
+  </ul>
+</BaseLayout>

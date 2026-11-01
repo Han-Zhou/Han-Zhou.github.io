@@ -1,0 +1,245 @@
+---
+import VizLayout from '../../layouts/VizLayout.astro';
+import { tex } from '../../lib/tex';
+---
+
+<VizLayout
+  title="Nesterov acceleration"
+  topic="Optimization"
+  description="Interactive race between gradient descent, heavy-ball momentum, and Nesterov's accelerated gradient."
+>
+  <p>
+    Gradient descent with step <Fragment set:html={tex(String.raw`\alpha = 1/L`)} /> reaches accuracy <Fragment set:html={tex(String.raw`\varepsilon`)} /> on an <Fragment set:html={tex(String.raw`L`)} />-smooth, <Fragment set:html={tex(String.raw`\mu`)} />-strongly convex function in about <Fragment set:html={tex(String.raw`\kappa \log(1/\varepsilon)`)} /> steps, where <Fragment set:html={tex(String.raw`\kappa = L/\mu`)} />.
+    Momentum methods reuse the previous step to build up speed along shallow directions and damp the oscillation across steep ones.
+  </p>
+  <Fragment set:html={tex(String.raw`\begin{aligned}
+    \text{heavy ball:}\quad & x_{k+1} = x_k - \alpha \nabla f(x_k) + \beta\,(x_k - x_{k-1}) \\
+    \text{Nesterov:}\quad & y_k = x_k + \beta_k\,(x_k - x_{k-1}), \qquad x_{k+1} = y_k - \alpha \nabla f(y_k)
+  \end{aligned}`, true)} />
+  <p>
+    The only difference is <em>where the gradient is evaluated</em>. Nesterov first moves with the momentum to a look-ahead point <Fragment set:html={tex(String.raw`y_k`)} /> and corrects from there, which lets it notice it is about to overshoot.
+    With well-chosen parameters both need only about <Fragment set:html={tex(String.raw`\sqrt{\kappa}\log(1/\varepsilon)`)} /> steps,
+    and Nesterov's method is guaranteed to get the <Fragment set:html={tex(String.raw`O(1/k^2)`)} /> rate on every smooth convex function,
+    where heavy ball can fail.
+  </p>
+
+  <div class="viz" id="nag">
+    <div class="viz-panels">
+      <div class="viz-panel"><canvas data-c="main"></canvas></div>
+      <div class="viz-panel"><canvas data-c="conv" class="short"></canvas></div>
+    </div>
+    <ul class="viz-legend">
+      <li style="color: var(--viz-4)"><i></i>gradient descent</li>
+      <li style="color: var(--viz-2)"><i></i>heavy ball</li>
+      <li style="color: var(--viz-1)"><i></i>Nesterov (hollow dot = look-ahead yₖ)</li>
+    </ul>
+    <p class="viz-hint">Drag the hollow point to move the starting point.</p>
+    <div class="viz-controls">
+      <label>Function
+        <select data-k="fn">
+          <option value="quadratic">Quadratic</option>
+          <option value="lse">Exponential bowl</option>
+          <option value="rosenbrock">Rosenbrock</option>
+          <option value="himmelblau">Himmelblau</option>
+        </select>
+      </label>
+      <label data-only="quadratic">κ <input type="range" data-k="kappa" min="1" max="100" step="1" value="30" /><output></output></label>
+      <label data-only="quadratic">θ <input type="range" data-k="theta" min="0" max="180" step="5" value="30" /><output></output></label>
+      <label>α <input type="range" data-k="alpha" data-fmt="exp" min="-4" max="0" step="0.05" value="-1.5" /><output></output></label>
+      <span class="muted" data-out="lhint" style="font-size: 13px;"></span>
+      <label>Momentum
+        <select data-k="mode">
+          <option value="schedule">Schedule βₖ = (k−1)/(k+2)</option>
+          <option value="constant">Constant β</option>
+          <option value="optimal">Optimal for κ (per method)</option>
+        </select>
+      </label>
+      <label data-mode="constant">β <input type="range" data-k="beta" min="0" max="0.99" step="0.01" value="0.8" /><output></output></label>
+      <button type="button" data-act="optimal">Use optimal</button>
+      <label><input type="checkbox" data-k="gd" checked /> GD</label>
+      <label><input type="checkbox" data-k="heavy" checked /> heavy ball</label>
+      <label><input type="checkbox" data-k="nesterov" checked /> Nesterov</label>
+      <span class="viz-buttons">
+        <button data-act="reset">⏮</button>
+        <button data-act="back">‹</button>
+        <button data-act="play">Play</button>
+        <button data-act="step">›</button>
+        <button data-act="end">⏭</button>
+      </span>
+    </div>
+    <p class="viz-readout" data-out="readout"></p>
+  </div>
+
+  <h2>Things to try</h2>
+  <ul>
+    <li>Step through with heavy ball and Nesterov both ticked. Both take the same momentum step <Fragment set:html={tex(String.raw`\beta(x_k - x_{k-1})`)} />; only the point where the gradient is evaluated is different.</li>
+    <li>Find Nesterov’s look-ahead point (the hollow dot). It is past the valley floor, so its gradient pulls back.</li>
+    <li>Compare heavy ball, which evaluates the gradient at <Fragment set:html={tex(String.raw`x_k`)} />, below the floor. Its overshoot grows.</li>
+  </ul>
+</VizLayout>
+
+<script>
+  import { Plot, contours, drawContours, controls, player, out, fmt, norm, type Vec, type ContourSet } from '../../viz/core';
+  import { add3DToggle } from '../../viz/view3d';
+  import { objective, symEig, type Objective } from '../../viz/functions';
+  import { momentum, type Iterate } from '../../viz/optim';
+  import { convergence, type Series } from '../../viz/charts';
+  import { padded } from '../../viz/quasi';
+
+  type Kind = 'gd' | 'heavy' | 'nesterov';
+  const KINDS: Kind[] = ['gd', 'heavy', 'nesterov'];
+  const NAMES: Record<Kind, string> = { gd: 'GD', heavy: 'Heavy ball', nesterov: 'Nesterov' };
+  const COLOR: Record<Kind, number> = { gd: 3, heavy: 1, nesterov: 0 };
+
+  const root = document.getElementById('nag')!;
+  const main = new Plot(root.querySelector<HTMLCanvasElement>('[data-c="main"]')!, { x: [-4, 4], y: [-3, 3] });
+  const conv = new Plot(root.querySelector<HTMLCanvasElement>('[data-c="conv"]')!, { x: [0, 1], y: [0, 1] }, { equal: false });
+
+  let obj: Objective;
+  let cs: ContourSet;
+  let x0: Vec;
+  let L = 1;
+  let mu = 1;
+  const paths: Record<Kind, Iterate[]> = { gd: [], heavy: [], nesterov: [] };
+  const used: Record<Kind, { alpha: number; beta: string }> = { gd: { alpha: 0, beta: '' }, heavy: { alpha: 0, beta: '' }, nesterov: { alpha: 0, beta: '' } };
+
+  const ctl = controls(root, (_p, key) => {
+    if (key === 'fn' || key === 'kappa' || key === 'theta') setObjective(key === 'fn');
+    else recompute();
+  });
+
+  root.querySelector('[data-act="optimal"]')?.addEventListener('click', () => {
+    ctl.set('mode', 'optimal');
+    recompute();
+  });
+
+  function setObjective(resetStart: boolean) {
+    const p = ctl.read();
+    obj = objective(p.fn as string, p.kappa as number, p.theta as number);
+    root.querySelectorAll<HTMLElement>('[data-only]').forEach((el) => (el.style.display = el.dataset.only === p.fn ? '' : 'none'));
+    if (resetStart || !x0) x0 = obj.start;
+    // smoothness / strong convexity constants at the minimizer (exact for the quadratic)
+    const [l1, l2] = symEig(obj.hess(obj.xstar));
+    L = l1;
+    mu = Math.max(l2, 1e-9);
+    main.setView(obj.view);
+    cs = contours(obj.f, padded(obj.view));
+    recompute();
+  }
+
+  function recompute() {
+    const p = ctl.read();
+    const mode = p.mode as string;
+    root.querySelectorAll<HTMLElement>('[data-mode]').forEach((el) => (el.style.display = el.dataset.mode === mode ? '' : 'none'));
+    const exact = obj.id === 'quadratic';
+    out(root, 'lhint', `1/L ${exact ? '=' : '≈'} ${fmt(1 / L)}${exact ? '' : ' (at x*)'}`);
+    const alpha = Math.pow(10, p.alpha as number);
+    const sk = Math.sqrt(L / mu);
+    for (const kind of KINDS) {
+      if (!p[kind]) {
+        paths[kind] = [];
+        continue;
+      }
+      let a = alpha;
+      let b: number | 'schedule' = mode === 'schedule' ? 'schedule' : (p.beta as number);
+      if (mode === 'optimal') {
+        if (kind === 'gd') a = 2 / (L + mu);
+        if (kind === 'heavy') {
+          a = 4 / (Math.sqrt(L) + Math.sqrt(mu)) ** 2;
+          b = ((sk - 1) / (sk + 1)) ** 2;
+        }
+        if (kind === 'nesterov') {
+          a = 1 / L;
+          b = (sk - 1) / (sk + 1);
+        }
+      }
+      used[kind] = { alpha: a, beta: kind === 'gd' ? '—' : b === 'schedule' ? '(k−1)/(k+2)' : fmt(b) };
+      paths[kind] = momentum(obj, x0, a, kind, b, 300);
+    }
+    const k = Math.min(play.k, maxK());
+    play.set(k === 0 ? Math.min(maxK(), 25) : k);
+  }
+
+  const maxK = () => Math.max(1, ...KINDS.map((k) => paths[k].length)) - 1;
+  const at = (path: Iterate[], k: number) => path[Math.min(k, path.length - 1)];
+
+  const play = player(root, {
+    max: maxK,
+    fps: 8,
+    onFrame: () => {
+      main.redraw();
+      conv.redraw();
+      report();
+    },
+  });
+
+  main.handle(
+    () => x0,
+    (p) => {
+      x0 = p;
+      recompute();
+    },
+  );
+
+  const cut3 = (pts: Iterate[], k: number) => pts.slice(0, Math.min(k, pts.length - 1) + 1).map((it) => it.x);
+  add3DToggle(root, main, (t) =>
+    !obj
+      ? null
+      : {
+          obj,
+          view: obj.view,
+          paths: [...KINDS.map((kind) => ({ pts: cut3(paths[kind], play.k), color: t.series[COLOR[kind]] }))].filter((p) => p.pts.length),
+          start: x0,
+          setStart: (p) => {
+            x0 = p;
+            recompute();
+          },
+        },
+  );
+
+  main.draw(() => {
+    if (!obj) return;
+    const t = main.theme;
+    const k = play.k;
+    drawContours(main, cs);
+    main.dot(obj.xstar, 3, t.muted);
+    for (const kind of KINDS) {
+      const path = paths[kind];
+      if (!path.length) continue;
+      const color = t.series[COLOR[kind]];
+      const kk = Math.min(k, path.length - 1);
+      const pts = path.slice(0, kk + 1).map((it) => it.x);
+      main.polyline(pts, { color, width: kind === 'nesterov' ? 2 : 1.75, alpha: 0.9 });
+      pts.forEach((x, i) => main.dot(x, i === kk ? 4.5 : 2, color));
+      // look-ahead: x_k → y_k (momentum) then y_k → x_{k+1} (gradient step)
+      const cur = path[kk];
+      if (kind === 'nesterov' && cur.y && kk < path.length - 1) {
+        main.line(cur.x, cur.y, { color, width: 1.5, dash: [3, 3] });
+        main.arrow(cur.y, path[kk + 1].x, { color, width: 1.5 });
+        main.dot(cur.y, 4, color, true);
+      }
+    }
+    main.dot(x0, 6, t.strong, true);
+  });
+
+  conv.draw(() => {
+    if (!obj) return;
+    const t = conv.theme;
+    const series: Series[] = KINDS.filter((k) => paths[k].length).map((k) => ({ values: paths[k].map((it) => it.f - obj.fstar), color: t.series[COLOR[k]] }));
+    if (series.length) convergence(conv, series, { k: play.k, ylabel: 'f(xₖ) − f*' });
+  });
+
+  function report() {
+    const k = play.k;
+    const lines = KINDS.filter((kind) => paths[kind].length).map((kind) => {
+      const path = paths[kind];
+      const it = at(path, k);
+      const last = path[path.length - 1];
+      const status = !Number.isFinite(last.f) || norm(last.x) > 1e5 ? ' · diverges' : norm(last.g) < 1e-6 ? ` · converged in ${path.length - 1}` : '';
+      return `${NAMES[kind]}: f − f* = ${fmt(it.f - obj.fstar)} · α = ${fmt(used[kind].alpha)}, β = ${used[kind].beta}${status}`;
+    });
+    out(root, 'readout', `k = ${k} · κ ${obj.id === 'quadratic' ? '=' : '≈'} ${fmt(L / mu)}<br>${lines.join('<br>')}`);
+  }
+
+  setObjective(true);
+</script>

@@ -1,15 +1,20 @@
 import { getCollection } from 'astro:content';
+import { visualizations } from '../viz/registry';
 
 export async function GET({ site }: { site: URL }) {
-  const work = await getCollection('work');
+  const notes = await getCollection('notes', ({ data }) => data.status === 'published');
   const writing = await getCollection('writing', ({ data }) => data.status === 'published');
   const paths = [
     '/',
-    '/work/',
-    '/writing/',
+    '/gig/',
+    '/scribbles/',
+    '/scribbles/reading-list/',
+    '/resume/',
     '/about/',
-    ...work.map((entry) => `/work/${entry.id}/`),
-    ...writing.map((entry) => `/writing/${entry.id}/`),
+    ...notes.map((entry) => `/gig/notes/${entry.id}/`),
+    ...writing.map((entry) => `/scribbles/${entry.id}/`),
+    '/visualizations/',
+    ...visualizations.map((v) => `/visualizations/${v.slug}/`),
   ];
 
   const urls = paths

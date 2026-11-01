@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" role="img" aria-labelledby="title desc">
+  <title id="title">Han Zhou</title>
+  <desc id="desc">A black and white modular graphic for Han Zhou's portfolio.</desc>
+  <rect width="1200" height="630" fill="#000"/>
+  <g fill="none" stroke="#fff">
+    <rect x="18" y="18" width="1164" height="594" stroke-width="6"/>
+    <rect x="36" y="36" width="705" height="384" stroke-width="3"/>
+    <rect x="753" y="36" width="411" height="236" stroke-width="6"/>
+    <rect x="753" y="284" width="411" height="128" stroke-width="3"/>
+    <rect x="36" y="432" width="426" height="162" stroke-width="3"/>
+    <rect x="474" y="432" width="690" height="162" stroke-width="6"/>
+  </g>
+  <g fill="#fff" font-family="monospace" font-weight="900">
+    <text x="61" y="230" font-size="180">HAN</text>
+    <text x="61" y="392" font-size="180">ZHOU</text>
+    <text x="782" y="120" font-size="36">MATH / CODE</text>
+    <text x="782" y="175" font-size="36">RESEARCH /</text>
+    <text x="782" y="230" font-size="36">SOFTWARE</text>
+    <text x="786" y="365" font-size="52">BUILD / BREAK</text>
+    <text x="62" y="529" font-size="44">LEARN COOL THINGS</text>
+    <text x="508" y="535" font-size="76">HAN-ZHOU.GITHUB.IO</text>
+  </g>
+</svg>

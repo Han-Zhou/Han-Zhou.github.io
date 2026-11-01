@@ -1,36 +1,12 @@
 ---
-import SiteNav from '../components/SiteNav.astro';
+import ContactIcons from '../components/ContactIcons.astro';
 import BaseLayout from '../layouts/BaseLayout.astro';
 ---
 
 <BaseLayout
   title="Contact — Han Zhou"
-  description="Contact Han Zhou by email, GitHub, or LinkedIn."
-  bodyClass="paper-page"
+  description="Contact Han Zhou by email, GitHub, or X."
 >
-  <SiteNav />
-  <main id="main-content" class="about-shell">
-    <header class="page-title-grid">
-      <h1>Contact</h1>
-    </header>
-
-    <div class="about-grid">
-      <section class="contact-card">
-        <h2>Email</h2>
-        <p>[ADD EMAIL]</p>
-      </section>
-
-      <a class="contact-card" href="https://github.com/Han-Zhou">
-        <h2>GitHub</h2>
-        <span>Han-Zhou ↗</span>
-      </a>
-
-      <section class="contact-card">
-        <h2>LinkedIn</h2>
-        <p>[ADD LINKEDIN]</p>
-      </section>
-
-      <section class="contact-halftone halftone" aria-label="Decorative halftone panel"></section>
-    </div>
-  </main>
+  <h1>Contact</h1>
+  <ContactIcons withText />
 </BaseLayout>

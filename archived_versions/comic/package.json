@@ -1,0 +1,22 @@
+{
+  "name": "han-zhou-portfolio",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "ASTRO_TELEMETRY_DISABLED=1 astro dev",
+    "build": "ASTRO_TELEMETRY_DISABLED=1 astro check && ASTRO_TELEMETRY_DISABLED=1 astro build",
+    "check:links": "node scripts/check-links.mjs",
+    "check": "ASTRO_TELEMETRY_DISABLED=1 astro check",
+    "preview": "ASTRO_TELEMETRY_DISABLED=1 astro preview",
+    "verify": "npm run build && npm run check:links"
+  },
+  "devDependencies": {
+    "@astrojs/check": "0.9.10",
+    "@astrojs/markdown-remark": "7.3.1",
+    "astro": "7.3.2",
+    "katex": "0.18.7",
+    "rehype-katex": "7.0.1",
+    "remark-math": "6.0.0",
+    "typescript": "6.0.3"
+  }
+}

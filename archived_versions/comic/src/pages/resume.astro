@@ -1,0 +1,27 @@
+---
+import SiteNav from '../components/SiteNav.astro';
+import BaseLayout from '../layouts/BaseLayout.astro';
+---
+
+<BaseLayout
+  title="Résumé — Coming Soon — Han Zhou"
+  description="Han Zhou's résumé will be available here soon."
+  bodyClass="paper-page"
+  index={false}
+>
+  <SiteNav />
+  <main id="main-content" class="utility-shell">
+    <section class="utility-panel">
+      <div class="utility-panel__main">
+        <p class="placeholder-stamp">Not yet available</p>
+        <h1>Résumé coming soon.</h1>
+        <p>The route works; the document does not exist yet. Add the real PDF before the public launch.</p>
+        <div class="utility-links">
+          <a href="/about/">Contact Han</a>
+          <a href="/work/">See work</a>
+        </div>
+      </div>
+      <div class="utility-panel__aside halftone" aria-hidden="true"></div>
+    </section>
+  </main>
+</BaseLayout>

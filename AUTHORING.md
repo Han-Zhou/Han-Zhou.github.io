@@ -12,21 +12,19 @@ npm run verify
 
 `npm run verify` runs Astro’s type/content checks, creates the production build in `dist/`, and verifies every generated internal link and asset.
 
-## Add work
+## Add notes
 
-Create a Markdown file in `src/content/work/`:
+Notes appear under **Gig** at `/gig/notes/<file-name>/`. Create a Markdown file in `src/content/notes/`:
 
 ```yaml
 ---
-title: "Project title"
-summary: "One clear sentence."
-date: 2026-09-12
-order: 1
+title: "Note title"
+date: 2026-10-31
+description: "One clear sentence."
+status: "published"
 placeholder: false
 ---
 ```
-
-Only `title`, `summary`, and `date` are required content fields. `order` controls the manually curated index order. The Markdown body can use any structure.
 
 ## Add writing
 
@@ -51,12 +49,11 @@ Markdown supports syntax-highlighted code, KaTeX mathematics, footnotes, tables,
 
 - Replace the eight specimen Markdown entries.
 - Fill the bracketed fields and contact links in `src/pages/about.astro`.
-- Add the real résumé PDF to `public/` and replace the coming-soon page in `src/pages/resume.astro` with a link to it.
-- Revisit the system-monospace font choice if desired.
+- To update the résumé, replace `public/Han_Zhou_resume.pdf` (the Résumé page embeds it).
 - Keep `placeholder: true` on any specimen material that remains.
 
 ## GitHub Pages
 
 The workflow at `.github/workflows/deploy.yml` builds and deploys on pushes to `main`. In the repository’s GitHub settings, set **Pages → Build and deployment → Source** to **GitHub Actions** before the first deployment.
 
-The old terminal prototype remains in `archived_versions/` as repository history and is not copied into the Astro build.
+Earlier designs are kept in `archived_versions/` (`terminal/` — the original static prototype; `comic/` — the comic-style Astro version) as repository history. They are not copied into the build.

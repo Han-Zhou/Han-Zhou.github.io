@@ -1,0 +1,251 @@
+---
+import VizLayout from '../../layouts/VizLayout.astro';
+import { tex } from '../../lib/tex';
+---
+
+<VizLayout
+  title="Quasi-Newton (BFGS)"
+  topic="Optimization"
+  description="Interactive BFGS: watch the inverse-Hessian approximation learn the curvature of the objective, compared with Newton and steepest descent."
+>
+  <p>
+    Newton's method steps to the minimizer of the local quadratic model, <Fragment set:html={tex(String.raw`x_{k+1} = x_k - \nabla^2 f(x_k)^{-1}\nabla f(x_k)`)} />,
+    which is fast but needs second derivatives and a linear solve. BFGS keeps an approximation <Fragment set:html={tex(String.raw`H_k \approx \nabla^2 f(x_k)^{-1}`)} /> instead and corrects it after every step using only gradients:
+  </p>
+  <Fragment set:html={tex(String.raw`H_{k+1} = (I - \rho_k s_k y_k^\top)\, H_k\, (I - \rho_k y_k s_k^\top) + \rho_k s_k s_k^\top,\qquad s_k = x_{k+1}-x_k,\; y_k = \nabla f_{k+1} - \nabla f_k,\; \rho_k = \frac{1}{y_k^\top s_k}.`, true)} />
+  <p>
+    The update is the smallest change (in a weighted norm) that makes <Fragment set:html={tex(String.raw`H_{k+1}`)} /> satisfy the <em>secant equation</em> <Fragment set:html={tex(String.raw`H_{k+1} y_k = s_k`)} />: along the step just taken, it matches the
+    curvature the gradients actually revealed.
+  </p>
+  <p>
+    Below, the solid ellipse at the current iterate is the curvature BFGS believes in, <Fragment set:html={tex(String.raw`\{d : d^\top H_k^{-1} d = r^2\}`)} />; the dashed one is the truth, <Fragment set:html={tex(String.raw`\{d : d^\top \nabla^2 f(x_k)\, d = r^2\}`)} /> (drawn when the Hessian is positive definite).
+    The cross marks where the model says the minimizer is, <Fragment set:html={tex(String.raw`x_k - H_k \nabla f(x_k)`)} />.
+  </p>
+
+  <div class="viz" id="bfgs">
+    <div class="viz-panels">
+      <div class="viz-panel"><canvas data-c="main"></canvas></div>
+      <div class="viz-panel"><canvas data-c="conv" class="short"></canvas></div>
+    </div>
+    <ul class="viz-legend">
+      <li style="color: var(--viz-1)"><i></i>BFGS · model curvature H<sub>k</sub><sup>−1</sup></li>
+      <li style="color: var(--viz-2)"><i></i>true Hessian ∇²f(x<sub>k</sub>)</li>
+      <li style="color: var(--viz-3)"><i></i>Newton</li>
+      <li style="color: var(--viz-4)"><i></i>steepest descent</li>
+    </ul>
+    <p class="viz-hint">Drag the hollow point to move the starting point.</p>
+    <div class="viz-controls">
+      <label>Function
+        <select data-k="fn">
+          <option value="rosenbrock">Rosenbrock</option>
+          <option value="quadratic">Quadratic</option>
+          <option value="lse">Exponential bowl</option>
+          <option value="himmelblau">Himmelblau</option>
+        </select>
+      </label>
+      <label data-only="quadratic">κ <input type="range" data-k="kappa" min="1" max="50" step="1" value="12" /><output></output></label>
+      <label data-only="quadratic">θ <input type="range" data-k="theta" min="0" max="180" step="5" value="30" /><output></output></label>
+      <label>H₀
+        <select data-k="h0">
+          <option value="identity">Identity</option>
+          <option value="scaled">Scaled (sᵀy / yᵀy)·I</option>
+        </select>
+      </label>
+      <label>Line search
+        <select data-k="ls">
+          <option value="wolfe">Strong Wolfe</option>
+          <option value="armijo">Backtracking (Armijo)</option>
+          <option value="exact">Exact</option>
+        </select>
+      </label>
+      <label><input type="checkbox" data-k="newton" /> Newton</label>
+      <label><input type="checkbox" data-k="sd" /> steepest descent</label>
+      <span class="viz-buttons">
+        <button data-act="reset">⏮</button>
+        <button data-act="back">‹</button>
+        <button data-act="play">Play</button>
+        <button data-act="step">›</button>
+        <button data-act="end">⏭</button>
+      </span>
+    </div>
+    <p class="viz-readout" data-out="readout"></p>
+  </div>
+
+  <h2>Things to try</h2>
+  <ul>
+    <li>Step back to k = 0. <Fragment set:html={tex(String.raw`H_0 = I`)} />, so the model ellipse is a circle. Scrub k forward and watch it turn to take the shape of the dashed Hessian ellipse, which matches the level sets.</li>
+    <li>On the quadratic, tick steepest descent and raise κ. The steepest-descent iteration count grows like κ; BFGS changes very little.</li>
+    <li>Switch to Rosenbrock with steepest descent ticked. Steepest descent moves very slowly along the curved valley.</li>
+    <li>Watch the step size <Fragment set:html={tex(String.raw`t_k`)} /> in the readout. Near <Fragment set:html={tex(String.raw`x^*`)} />, <Fragment set:html={tex(String.raw`t_k = 1`)} /> at every step.</li>
+    <li>Watch <Fragment set:html={tex(String.raw`s_k^\top y_k`)} />. It stays positive at every step.</li>
+    <li>Compare the two error measures in the readout. The Dennis–Moré ratio <Fragment set:html={tex(String.raw`\|(B_k - \nabla^2 f^*)s_k\| / \|s_k\|`)} /> goes to 0, but <Fragment set:html={tex(String.raw`\|B_k - \nabla^2 f^*\|`)} /> can stay large.</li>
+    <li>Tick Newton and steepest descent and compare the slopes on the log chart: steepest descent is linear, BFGS is superlinear, and Newton is quadratic.</li>
+  </ul>
+</VizLayout>
+
+<script>
+  import { Plot, contours, drawContours, controls, player, out, fmt, norm, add, scale, sub, type Vec, type ContourSet } from '../../viz/core';
+  import { add3DToggle } from '../../viz/view3d';
+  import { objective, ellipse, symMul, symEig, symInv, type Objective, type Sym } from '../../viz/functions';
+  import { bfgs, newton, gradientDescent, type Iterate, type LineSearch } from '../../viz/optim';
+  import { convergence, type Series } from '../../viz/charts';
+  import { padded, isPD, inverseError, bfgsScaled } from '../../viz/quasi';
+
+  const root = document.getElementById('bfgs')!;
+  const main = new Plot(root.querySelector<HTMLCanvasElement>('[data-c="main"]')!, { x: [-2, 2], y: [-1, 3] });
+  const conv = new Plot(root.querySelector<HTMLCanvasElement>('[data-c="conv"]')!, { x: [0, 1], y: [0, 1] }, { equal: false });
+
+  let obj: Objective;
+  let cs: ContourSet;
+  let x0: Vec;
+  let bf: Iterate[] = [];
+  let nt: Iterate[] = [];
+  let sd: Iterate[] = [];
+
+  const ctl = controls(root, (_p, key) => {
+    if (key === 'fn' || key === 'kappa' || key === 'theta') setObjective(key === 'fn');
+    else recompute();
+  });
+
+  function setObjective(resetStart: boolean) {
+    const p = ctl.read();
+    obj = objective(p.fn as string, p.kappa as number, p.theta as number);
+    root.querySelectorAll<HTMLElement>('[data-only]').forEach((el) => (el.style.display = el.dataset.only === p.fn ? '' : 'none'));
+    if (resetStart || !x0) x0 = obj.start;
+    main.setView(obj.view);
+    cs = contours(obj.f, padded(obj.view));
+    recompute();
+  }
+
+  function recompute() {
+    const p = ctl.read();
+    const ls = { kind: p.ls as LineSearch, alpha: 1, c1: 1e-4, c2: 0.9 };
+    bf = p.h0 === 'scaled' ? bfgsScaled(obj, x0, ls, 150) : bfgs(obj, x0, ls, [1, 0, 1], 150);
+    nt = p.newton ? newton(obj, x0, { kind: 'armijo', alpha: 1 }, 150) : [];
+    sd = p.sd ? gradientDescent(obj, x0, ls, 150) : [];
+    const k = Math.min(play.k, maxK());
+    play.set(k === 0 ? Math.min(maxK(), 3) : k);
+  }
+
+  const maxK = () => Math.max(bf.length, nt.length, sd.length) - 1;
+  const at = (path: Iterate[], k: number) => path[Math.min(k, path.length - 1)];
+
+  const play = player(root, {
+    max: maxK,
+    fps: 3,
+    onFrame: () => {
+      main.redraw();
+      conv.redraw();
+      report();
+    },
+  });
+
+  main.handle(
+    () => x0,
+    (p) => {
+      x0 = p;
+      recompute();
+    },
+  );
+
+  const cut3 = (pts: Iterate[], k: number) => pts.slice(0, Math.min(k, pts.length - 1) + 1).map((it) => it.x);
+  add3DToggle(root, main, (t) =>
+    !obj
+      ? null
+      : {
+          obj,
+          view: obj.view,
+          paths: [{ pts: cut3(sd, play.k), color: t.series[3] }, { pts: cut3(nt, play.k), color: t.series[2] }, { pts: cut3(bf, play.k), color: t.series[0] }].filter((p) => p.pts.length),
+          start: x0,
+          setStart: (p) => {
+            x0 = p;
+            recompute();
+          },
+        },
+  );
+
+  function drawPath(path: Iterate[], k: number, color: string, width = 2) {
+    const pts = path.slice(0, k + 1).map((it) => it.x);
+    main.polyline(pts, { color, width });
+    pts.forEach((x, i) => main.dot(x, i === pts.length - 1 ? 4.5 : 2.5, color));
+  }
+
+  /** H used at iterate k: the stored one, or the latest update for the final iterate. */
+  const Hat = (k: number): Sym => at(bf, k).H ?? [1, 0, 1];
+
+  main.draw(() => {
+    if (!obj) return;
+    const t = main.theme;
+    const k = play.k;
+    drawContours(main, cs);
+    main.dot(obj.xstar, 3, t.muted);
+    if (sd.length) drawPath(sd, k, t.series[3], 1.75);
+    if (nt.length) drawPath(nt, k, t.series[2], 1.75);
+    drawPath(bf, k, t.series[0]);
+
+    const cur = at(bf, k);
+    const H = Hat(k);
+    const B = symInv(H); // model Hessian
+    const hess = obj.hess(cur.x);
+    // common radius: the true ellipse's long semi-axis is ~55px (else the model's)
+    const ref = isPD(hess) ? hess : B;
+    const r = 55 * main.px * Math.sqrt(Math.max(1e-12, symEig(ref)[1]));
+    if (isPD(hess)) main.polyline(ellipse(hess, cur.x, r), { color: t.series[1], width: 1.75, dash: [5, 4] });
+    if (isPD(B)) main.polyline(ellipse(B, cur.x, r), { color: t.series[0], width: 2 });
+
+    // model minimizer x - H g
+    if (norm(cur.g) > 1e-10) {
+      const m = sub(cur.x, symMul(H, cur.g));
+      main.line(cur.x, m, { color: t.series[0], width: 1, dash: [2, 3] });
+      const s = 5 * main.px;
+      main.line(add(m, [-s, -s]), add(m, [s, s]), { color: t.series[0], width: 2 });
+      main.line(add(m, [-s, s]), add(m, [s, -s]), { color: t.series[0], width: 2 });
+      // negative gradient for reference
+      const L = 45 * main.px;
+      main.arrow(cur.x, add(cur.x, scale(cur.g, -L / norm(cur.g))), { color: t.muted, width: 1.5 });
+    }
+    main.dot(x0, 6, t.strong, true);
+  });
+
+  conv.draw(() => {
+    if (!obj || !bf.length) return;
+    const t = conv.theme;
+    const series: Series[] = [{ values: bf.map((it) => it.f - obj.fstar), color: t.series[0] }];
+    if (nt.length) series.push({ values: nt.map((it) => it.f - obj.fstar), color: t.series[2] });
+    if (sd.length) series.push({ values: sd.map((it) => it.f - obj.fstar), color: t.series[3] });
+    convergence(conv, series, { k: play.k, ylabel: 'f(xₖ) − f*' });
+  });
+
+  function report() {
+    const k = play.k;
+    const cur = at(bf, k);
+    const H = Hat(k);
+    const hess = obj.hess(cur.x);
+    const err = isPD(hess) ? fmt(inverseError(H, hess)) : 'n/a (∇²f not positive definite)';
+    // step size, curvature condition, and B_k error measures (B_k = H_k⁻¹, ∇²f* = ∇²f(x*))
+    const nxt = bf[Math.min(k + 1, bf.length - 1)];
+    const s = sub(nxt.x, cur.x);
+    const y = sub(nxt.g, cur.g);
+    const B = symInv(H);
+    const Hs = obj.hess(obj.xstar);
+    const D: Sym = [B[0] - Hs[0], B[1] - Hs[1], B[2] - Hs[2]];
+    const step =
+      k < bf.length - 1
+        ? `<br>t<sub>k</sub> = ${fmt(cur.alpha ?? NaN)} · s<sub>k</sub>ᵀy<sub>k</sub> = ${fmt(s[0] * y[0] + s[1] * y[1])} · ` +
+          `‖(B<sub>k</sub> − ∇²f*)s<sub>k</sub>‖/‖s<sub>k</sub>‖ = ${norm(s) > 1e-7 ? fmt(norm(symMul(D, s)) / norm(s)) : '— (step below rounding level)'} · ‖B<sub>k</sub> − ∇²f*‖<sub>F</sub> = ${fmt(Math.hypot(D[0], D[1], D[1], D[2]))}`
+        : '';
+    const line = (name: string, path: Iterate[]) =>
+      path.length ? `<br>${name}: ${Math.min(k, path.length - 1)} / ${path.length - 1} steps, f − f* = ${fmt(at(path, k).f - obj.fstar)}` : '';
+    out(
+      root,
+      'readout',
+      `k = ${k} · BFGS: ${Math.min(k, bf.length - 1)} / ${bf.length - 1} steps, f − f* = ${fmt(cur.f - obj.fstar)}, ‖∇f‖ = ${fmt(norm(cur.g))}` +
+        `<br>H<sub>k</sub> = [[${fmt(H[0])}, ${fmt(H[1])}], [${fmt(H[1])}, ${fmt(H[2])}]] · ‖H<sub>k</sub>∇²f(x<sub>k</sub>) − I‖<sub>F</sub> = ${err}` +
+        step +
+        line('Newton', nt) +
+        line('Steepest descent', sd),
+    );
+  }
+
+  setObjective(true);
+</script>

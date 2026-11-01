@@ -1,4 +1,4 @@
 {
   "extends": "astro/tsconfigs/strict",
-  "exclude": ["archived_versions"]
+  "exclude": ["archived_versions", "dist"]
 }

@@ -1,0 +1,27 @@
+---
+interface Item {
+  href: string;
+  title: string;
+  date: string;
+  summary?: string;
+}
+
+interface Props {
+  items: Item[];
+}
+
+const { items } = Astro.props;
+---
+
+{items.length === 0 && <p class="placeholder-note">Nothing here yet.</p>}
+<ul class="post-list">
+  {items.map((item) => (
+    <li>
+      <time>{item.date}</time>
+      <div>
+        <a href={item.href}>{item.title}</a>
+        {item.summary && <p>{item.summary}</p>}
+      </div>
+    </li>
+  ))}
+</ul>

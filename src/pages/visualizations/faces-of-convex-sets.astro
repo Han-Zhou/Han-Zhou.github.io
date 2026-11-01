@@ -1,0 +1,431 @@
+---
+import VizLayout from '../../layouts/VizLayout.astro';
+import { tex } from '../../lib/tex';
+---
+
+<VizLayout
+  title="Faces of convex sets"
+  topic="Convex geometry"
+  description="Interactive faces, exposed faces, affine hulls, supporting hyperplanes, polar sets and conjugate faces of planar convex sets."
+>
+  <p>A <strong>face</strong> of a convex set <Fragment set:html={tex('C')} /> is a convex subset <Fragment set:html={tex(String.raw`F \subseteq C`)} /> such that whenever a segment of <Fragment set:html={tex('C')} /> has a point of its relative interior in <Fragment set:html={tex('F')} />, the whole segment lies in <Fragment set:html={tex('F')} />. In the plane the faces are <Fragment set:html={tex(String.raw`\varnothing`)} />, extreme points, edges, and <Fragment set:html={tex('C')} /> itself; the dimension of a face is the dimension of its <strong>affine hull</strong>.</p>
+  <p>A face is <strong>exposed</strong> if a supporting hyperplane cuts it out:</p>
+  <Fragment set:html={tex(String.raw`F = \operatorname*{argmax}_{x\in C}\ \langle c, x\rangle = C \cap \{x : \langle c, x\rangle = \sigma_C(c)\},\qquad \sigma_C(c) = \max_{x\in C}\langle c,x\rangle.`, true)} />
+  <p>Every exposed face is a face, but not conversely. The right panel shows the <strong>polar</strong> <Fragment set:html={tex(String.raw`C^\circ = \{y : \langle x, y\rangle \le 1\ \ \forall x \in C\}`)} />, which turns points into lines and faces into <strong>conjugate faces</strong>:</p>
+  <Fragment set:html={tex(String.raw`F^\triangle = \{\, y \in C^\circ : \langle x, y\rangle = 1 \ \ \forall x \in F \,\}.`, true)} />
+  <p>When <Fragment set:html={tex(String.raw`0 \in \operatorname{int} C`)} />, conjugation reverses inclusion and swaps dimensions (a vertex of <Fragment set:html={tex('C')} /> becomes an edge of <Fragment set:html={tex(String.raw`C^\circ`)} /> and vice versa), and <Fragment set:html={tex(String.raw`F^{\triangle\triangle} = F`)} /> exactly when <Fragment set:html={tex('F')} /> is exposed.</p>
+
+  <div class="viz" id="faces">
+    <div class="viz-panels viz-panels--2">
+      <div class="viz-panel">
+        <p class="viz-panel__title">C</p>
+        <canvas data-c="primal" class="square"></canvas>
+      </div>
+      <div class="viz-panel">
+        <p class="viz-panel__title">C° — hover to see the line ⟨y, x⟩ = 1 on the left</p>
+        <canvas data-c="polar" class="square"></canvas>
+      </div>
+    </div>
+    <p class="viz-hint" data-out="hint"></p>
+    <div class="viz-controls">
+      <label>Set
+        <select data-k="shape">
+          <option value="polygon">Polygon (drag vertices)</option>
+          <option value="stadium">Stadium</option>
+          <option value="halfdisk">Half-disk</option>
+          <option value="disk">Disk</option>
+        </select>
+      </label>
+      <label>Mode
+        <select data-k="mode">
+          <option value="direction">Pick a direction c</option>
+          <option value="face">Pick a face</option>
+        </select>
+      </label>
+      <span class="viz-buttons"><button data-act="resetshape">Reset shape</button></span>
+    </div>
+    <ul class="viz-legend" data-out="legend"></ul>
+    <p class="viz-readout" data-out="readout"></p>
+  </div>
+
+  <h2>Things to try</h2>
+  <ul>
+    <li>Stadium, “pick a direction”: rotate <Fragment set:html={tex(String.raw`c`)} /> slowly across the normal of a flat side. The exposed face jumps from a single arc point to the whole flat side. No supporting line touches only a junction point, so the junctions are faces but not exposed faces.</li>
+    <li>Stadium: try to find a direction <Fragment set:html={tex(String.raw`c`)} /> that exposes only a junction point. You cannot find one.</li>
+    <li>Polygon, “pick a face”: select a vertex, then an edge containing it, then <Fragment set:html={tex(String.raw`C`)} /> itself (click inside). The conjugate faces go edge, vertex, <Fragment set:html={tex(String.raw`\varnothing`)} />: the map <Fragment set:html={tex(String.raw`F \mapsto F^\triangle`)} /> reverses the order.</li>
+    <li>Select an edge and look at its affine hull, the dashed line. It does not pass through the origin, so it is a translate <Fragment set:html={tex(String.raw`a + S`)} />, not a subspace.</li>
+  </ul>
+</VizLayout>
+
+<script>
+  import { Plot, controls, out, fmt, dot, norm, sub, add, scale, type Vec } from '../../viz/core';
+  import {
+    polygonShape,
+    stadium,
+    disk,
+    halfDisk,
+    polar,
+    inside,
+    exposedFace,
+    normalCone,
+    conjugate,
+    biconjugate,
+    isExposed,
+    faceDim,
+    junctionEdge,
+    segDist,
+    type Shape,
+    type Polar,
+    type Face,
+  } from '../../viz/convex';
+
+  const root = document.getElementById('faces')!;
+  const view = { x: [-2.2, 2.2] as [number, number], y: [-2.2, 2.2] as [number, number] };
+  const L = new Plot(root.querySelector<HTMLCanvasElement>('[data-c="primal"]')!, view);
+  const R = new Plot(root.querySelector<HTMLCanvasElement>('[data-c="polar"]')!, view);
+
+  const DEFAULT_PTS: Vec[] = [
+    [1.35, 0.15],
+    [0.7, 1.2],
+    [-0.8, 1.1],
+    [-1.4, -0.2],
+    [-0.6, -1.25],
+    [0.95, -1.0],
+    [0.25, 0.35],
+  ];
+  let pts: Vec[] = DEFAULT_PTS.map((p) => [...p] as Vec);
+  let c: Vec = [1.75, 0.55];
+  let shape: Shape | null = null;
+  let P: Polar = { ok: false, a: [] };
+  let sel: Face | null = null;
+  let hover: Vec | null = null;
+
+  const ctl = controls(root, (_p, key) => {
+    if (key === 'shape') {
+      sel = null;
+      rebuild();
+    }
+    if (key === 'mode') {
+      sel = null;
+      redraw();
+    }
+  });
+  const param = (k: string) => ctl.read()[k] as string;
+
+  function rebuild() {
+    const kind = param('shape');
+    shape = kind === 'stadium' ? stadium() : kind === 'disk' ? disk() : kind === 'halfdisk' ? halfDisk() : polygonShape(pts);
+    P = shape ? polar(shape) : { ok: false, a: [] };
+    if (sel && shape && sel.type !== 'whole' && sel.i >= shape.v.length) sel = null;
+    redraw();
+  }
+
+  function redraw() {
+    L.redraw();
+    R.redraw();
+    report();
+  }
+
+  root.querySelector('[data-act="resetshape"]')?.addEventListener('click', () => {
+    pts = DEFAULT_PTS.map((p) => [...p] as Vec);
+    c = [1.75, 0.55];
+    sel = null;
+    rebuild();
+  });
+
+  /* ---- handles: polygon vertices (polygon preset only) and the direction c (direction mode only) */
+  const FAR: Vec = [1e9, 1e9];
+  pts.forEach((_, j) =>
+    L.handle(
+      () => (param('shape') === 'polygon' ? pts[j] : FAR),
+      (p) => {
+        pts[j] = p;
+        rebuild();
+      },
+      12,
+    ),
+  );
+  L.handle(
+    () => (param('mode') === 'direction' ? c : FAR),
+    (p) => {
+      c = p;
+      redraw();
+    },
+  );
+
+  /* ---- face picking (own listener so it also works when a vertex handle is grabbed) */
+  L.canvas.addEventListener('pointerdown', (e) => {
+    if (param('mode') !== 'face' || !shape) return;
+    const r = L.canvas.getBoundingClientRect();
+    const p = L.toWorld(e.clientX - r.left, e.clientY - r.top);
+    sel = pickFace(shape, p);
+    redraw();
+  });
+
+  function pickFace(s: Shape, p: Vec): Face | null {
+    const px = L.px;
+    const m = s.v.length;
+    let best = -1;
+    let bd = Infinity;
+    s.v.forEach((v, i) => {
+      if (s.kind[i] === 'arc') return;
+      const d = norm(sub(v, p));
+      if (d < bd) {
+        bd = d;
+        best = i;
+      }
+    });
+    if (best >= 0 && bd < 13 * px) return { type: 'vertex', i: best };
+    for (let i = 0; i < m; i++) if (s.flat[i] && segDist(p, s.v[i], s.v[(i + 1) % m]) < 10 * px) return { type: 'edge', i };
+    best = -1;
+    bd = Infinity;
+    s.v.forEach((v, i) => {
+      if (s.kind[i] !== 'arc') return;
+      const d = norm(sub(v, p));
+      if (d < bd) {
+        bd = d;
+        best = i;
+      }
+    });
+    if (best >= 0 && bd < 13 * px) return { type: 'vertex', i: best };
+    if (inside(s.v, p)) return { type: 'whole' };
+    return null;
+  }
+
+  R.onHover((p) => {
+    hover = p;
+    L.redraw();
+    R.redraw();
+  });
+
+  /* ---- drawing helpers */
+  const perp = (v: Vec): Vec => [-v[1], v[0]];
+
+  function fan(plot: Plot, at: Vec, from: Vec, to: Vec, color: string) {
+    let t0 = Math.atan2(from[1], from[0]);
+    let t1 = Math.atan2(to[1], to[0]);
+    while (t1 < t0) t1 += 2 * Math.PI;
+    const r = 46 * plot.px;
+    const poly: Vec[] = [at];
+    for (let k = 0; k <= 24; k++) {
+      const t = t0 + ((t1 - t0) * k) / 24;
+      poly.push([at[0] + r * Math.cos(t), at[1] + r * Math.sin(t)]);
+    }
+    plot.polygon(poly, color);
+  }
+
+  function drawFace(plot: Plot, ptsF: Vec[], color: string, width = 4) {
+    if (ptsF.length === 1) plot.dot(ptsF[0], width + 1.5, color);
+    else if (ptsF.length === 2) {
+      plot.line(ptsF[0], ptsF[1], { color, width });
+      plot.dot(ptsF[0], width - 0.5, color);
+      plot.dot(ptsF[1], width - 0.5, color);
+    }
+  }
+
+  const facePts = (s: Shape, f: Face): Vec[] =>
+    f.type === 'vertex' ? [s.v[f.i]] : f.type === 'edge' ? [s.v[f.i], s.v[(f.i + 1) % s.v.length]] : [];
+
+  /* ---- left panel: C */
+  L.draw(() => {
+    const t = L.theme;
+    L.axes({ ticks: false });
+    if (param('shape') === 'polygon') {
+      pts.forEach((p) => L.dot(p, 3, t.muted));
+    }
+    if (!shape) {
+      L.label(10, 10, 'The points are collinear — no 2D convex set.', t.series[4]);
+      return;
+    }
+    const s = shape;
+    L.polygon(s.v, t.fill[0], { color: t.series[0], width: 1.75 });
+    L.dot([0, 0], 2.5, t.strong);
+    L.text([0, 0], '0', { dx: -8, dy: 10, size: 12 });
+
+    const mode = param('mode');
+    if (mode === 'direction') {
+      const e = exposedFace(s, c);
+      const cc = e.c;
+      const n2 = dot(cc, cc);
+      if (n2 > 0) {
+        const foot = scale(cc, e.sigma / n2);
+        L.infiniteLine(foot, perp(cc), { color: t.series[4], width: 1.5 });
+        const F = facePts(s, e.face);
+        if (e.face.type === 'edge') L.infiniteLine(F[0], sub(F[1], F[0]), { color: t.muted, width: 1, dash: [5, 5] });
+        drawFace(L, F, t.series[1]);
+      }
+      L.arrow([0, 0], c, { color: t.strong, width: 1.75 });
+      L.dot(c, 6, t.strong, true);
+      L.text(c, 'c', { dx: 10, dy: -8, color: t.strong });
+    } else if (sel) {
+      drawSelected(s, sel);
+    }
+
+    if (hover && P.ok) {
+      // the line {x : ⟨y, x⟩ = 1} dual to the hovered point y
+      const y = hover;
+      const n2 = dot(y, y);
+      if (n2 > 1e-6) L.infiniteLine(scale(y, 1 / n2), perp(y), { color: t.series[3], width: 1.5, dash: [6, 4] });
+    }
+  });
+
+  function drawSelected(s: Shape, f: Face) {
+    const t = L.theme;
+    const m = s.v.length;
+    if (f.type === 'whole') {
+      L.polygon(s.v, t.fill[1], { color: t.series[1], width: 3 });
+      return;
+    }
+    const F = facePts(s, f);
+    if (f.type === 'edge') {
+      const en = sub(F[1], F[0]);
+      const nrm: Vec = [en[1] / norm(en), -en[0] / norm(en)];
+      L.infiniteLine(F[0], en, { color: t.series[4], width: 1.5 }); // supporting line = aff F here
+      const mid = scale(add(F[0], F[1]), 0.5);
+      L.arrow(mid, add(mid, scale(nrm, 44 * L.px)), { color: t.series[4], width: 1.75 });
+      drawFace(L, F, t.series[1]);
+      return;
+    }
+    const v = F[0];
+    const [n0, n1] = normalCone(s, f.i);
+    if (s.kind[f.i] === 'corner') {
+      fan(L, v, n0, n1, t.fill[4]);
+      L.infiniteLine(v, perp(n0), { color: t.series[4], width: 1, dash: [4, 4], alpha: 0.7 });
+      L.infiniteLine(v, perp(n1), { color: t.series[4], width: 1, dash: [4, 4], alpha: 0.7 });
+      const mid = scale(add(n0, n1), 0.5);
+      L.infiniteLine(v, perp(mid), { color: t.series[4], width: 1.5 });
+    } else if (s.kind[f.i] === 'junction') {
+      // the unique supporting line also contains the whole flat edge — draw what it exposes
+      const j = junctionEdge(s, f.i);
+      const E: Vec[] = [s.v[j], s.v[(j + 1) % m]];
+      L.infiniteLine(v, perp(n0), { color: t.series[4], width: 1.5 });
+      L.line(E[0], E[1], { color: t.series[1], width: 7, alpha: 0.3 });
+      L.arrow(v, add(v, scale(n0, 44 * L.px)), { color: t.series[4], width: 1.75 });
+    } else {
+      L.infiniteLine(v, perp(n0), { color: t.series[4], width: 1.5 });
+      L.arrow(v, add(v, scale(n0, 44 * L.px)), { color: t.series[4], width: 1.75 });
+    }
+    drawFace(L, F, t.series[1]);
+    L.dot(v, 9, t.series[1], true);
+    L.dot(v, 4, t.series[1]);
+  }
+
+  /* ---- right panel: C° */
+  R.draw(() => {
+    const t = R.theme;
+    R.axes({ ticks: false });
+    R.dot([0, 0], 2.5, t.strong);
+    if (!shape) return;
+    if (!P.ok) {
+      R.label(12, 12, '0 is not in the interior of C:', t.series[4]);
+      R.label(12, 30, 'C° is unbounded and conjugate faces', t.muted);
+      R.label(12, 48, 'no longer pair up. Drag C back around 0.', t.muted);
+      return;
+    }
+    const s = shape;
+    R.polygon(P.a, t.fill[3], { color: t.series[3], width: 1.75 });
+
+    const mode = param('mode');
+    if (mode === 'direction') {
+      const e = exposedFace(s, c);
+      if (e.sigma > 0) {
+        const y = scale(e.c, 1 / e.sigma);
+        R.infiniteLine([0, 0], e.c, { color: t.border, width: 1, dash: [3, 4] });
+        drawFace(R, conjugate(s, P, e.face), t.series[2]);
+        R.dot(y, 6, t.strong, true);
+        R.text(y, 'c / σ(c)', { dx: 10, dy: -10, color: t.strong, size: 12 });
+      }
+    } else if (sel) {
+      // F^△ = C° ∩ ⋂_{x∈F} {y : ⟨x, y⟩ = 1}: draw those lines for the points (endpoints) of F
+      for (const x of facePts(s, sel)) {
+        const n2 = dot(x, x);
+        if (n2 > 1e-9) R.infiniteLine(scale(x, 1 / n2), perp(x), { color: t.series[4], width: 1, dash: [4, 4], alpha: 0.8 });
+      }
+      drawFace(R, conjugate(s, P, sel), t.series[2]);
+    }
+
+    if (hover) {
+      const inC = inside(P.a, hover);
+      R.dot(hover, 4, t.series[3]);
+      R.text(hover, inC ? 'y ∈ C°' : 'y ∉ C°', { dx: 8, dy: 12, color: t.series[3], size: 12 });
+    }
+  });
+
+  /* ---- text */
+  function legend() {
+    const mode = param('mode');
+    const items: [string, string][] = [
+      ['var(--viz-1)', 'C'],
+      ['var(--viz-4)', 'C°'],
+      ['var(--viz-2)', mode === 'direction' ? 'exposed face F' : 'selected face F'],
+      ['var(--viz-3)', 'conjugate face F^△'],
+      ['var(--viz-5)', 'supporting line(s) / normal cone'],
+    ];
+    if (mode === 'direction') items.push(['var(--muted)', 'aff F (dashed)']);
+    out(root, 'legend', items.map(([col, l]) => `<li style="color:${col}"><i></i><span style="color:var(--muted)">${l}</span></li>`).join(''));
+    out(
+      root,
+      'hint',
+      (mode === 'direction' ? 'Drag the hollow point c to rotate the supporting line.' : 'Click a vertex, an edge, a point on a curved arc, or the interior of C.') +
+        (param('shape') === 'polygon' ? ' Drag the small dots to reshape the polygon.' : ''),
+    );
+  }
+
+  const P2 = (v: Vec) => `(${fmt(v[0])}, ${fmt(v[1])})`;
+
+  function describeConj(pts: Vec[]) {
+    if (!P.ok) return 'undefined (0 ∉ int C)';
+    if (pts.length === 0) return '∅';
+    if (pts.length === 1) return `the point ${P2(pts[0])} of C° (dim 0)`;
+    return `the edge ${P2(pts[0])}–${P2(pts[1])} of C° (dim 1)`;
+  }
+
+  function report() {
+    legend();
+    if (!shape) return out(root, 'readout', '');
+    const s = shape;
+    const mode = param('mode');
+    let html = '';
+    if (mode === 'direction') {
+      const e = exposedFace(s, c);
+      const F = facePts(s, e.face);
+      const dim = faceDim(e.face);
+      html =
+        `c = ${P2(e.c)} · σ_C(c) = ${fmt(e.sigma)}<br>` +
+        `exposed face F = ${dim === 0 ? `{${P2(F[0])}}` : `[${P2(F[0])}, ${P2(F[1])}]`} · dim ${dim} · aff F = ${dim === 0 ? 'that point' : 'the line through the edge'}<br>` +
+        (P.ok && e.sigma > 0 ? `c/σ_C(c) = ${P2(scale(e.c, 1 / e.sigma))} ∈ ∂C° · F^△ = ${describeConj(conjugate(s, P, e.face))}` : 'σ_C(c) ≤ 0: the polar picture is not available');
+    } else if (!sel) {
+      html = 'No face selected.';
+    } else if (sel.type === 'whole') {
+      html =
+        'F = C · dim 2 · aff F = ℝ²<br>' +
+        'exposed only by the degenerate “hyperplane” c = 0 (by convention C is an exposed face of itself)<br>' +
+        'F^△ = ∅ (no y has ⟨0, y⟩ = 1), and ∅^△ = C°° = C';
+    } else {
+      const F = facePts(s, sel);
+      const dim = faceDim(sel);
+      const exp = isExposed(s, sel);
+      const kind = sel.type === 'vertex' ? s.kind[sel.i] : 'edge';
+      const bi = biconjugate(s, sel);
+      const what =
+        kind === 'corner'
+          ? 'corner (extreme point with a fan of supporting lines)'
+          : kind === 'arc'
+            ? 'smooth extreme point (one supporting line)'
+            : kind === 'junction'
+              ? 'extreme point where a flat side meets a curved cap'
+              : 'edge';
+      const [n0, n1] = sel.type === 'vertex' ? normalCone(s, sel.i) : [null, null];
+      html =
+        `F = ${dim === 0 ? `{${P2(F[0])}}` : `[${P2(F[0])}, ${P2(F[1])}]`} · ${what} · dim ${dim} · aff F = ${dim === 0 ? 'the point itself' : 'the line through the edge'}<br>` +
+        (exp
+          ? `exposed${n0 && n1 && kind === 'corner' ? ` by every c in the normal cone (${Math.round((Math.acos(Math.max(-1, Math.min(1, dot(n0, n1)))) * 180) / Math.PI)}° wide)` : sel.type === 'edge' ? ' by its outward normal' : ' by its unique normal'}<br>`
+          : `<b>not exposed</b>: the only supporting line here also contains the whole flat side, so it exposes that side instead<br>`) +
+        `F^△ = ${describeConj(conjugate(s, P, sel))}` +
+        (P.ok && bi ? ` · F^△△ = ${bi.type !== 'whole' && bi.type === sel.type && bi.i === sel.i ? 'F' : `the whole flat side ≠ F`}` : '');
+    }
+    out(root, 'readout', html);
+  }
+
+  rebuild();
+</script>

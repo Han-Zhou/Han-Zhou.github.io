@@ -1,0 +1,194 @@
+/* Visualization widgets. Categorical colors pass contrast on both themes. */
+:root {
+  --viz-1: light-dark(#2563c9, #7ea8ea);
+  --viz-2: light-dark(#c8620f, #eba25e);
+  --viz-3: light-dark(#23874c, #6cc28e);
+  --viz-4: light-dark(#7c45c4, #b89ce8);
+  --viz-5: light-dark(#c73a34, #ee8a84);
+}
+
+.viz {
+  margin: 28px 0 36px;
+}
+
+.viz-panels {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
+
+@media (min-width: 640px) {
+  .viz-panels--2 {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.viz-panel {
+  min-width: 0;
+}
+
+.viz-panel__title {
+  margin: 0 0 4px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.viz canvas {
+  display: block;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  border: 1px solid var(--faint);
+  border-radius: 4px;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.viz canvas.wide {
+  aspect-ratio: 16 / 9;
+}
+
+.viz canvas.square {
+  aspect-ratio: 1 / 1;
+}
+
+.viz canvas.short {
+  aspect-ratio: 5 / 2;
+}
+
+.viz-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 18px;
+  margin-top: 12px;
+  font-size: 14px;
+}
+
+.viz-controls label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted);
+}
+
+.viz-controls output {
+  min-width: 3.2em;
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: 13px;
+}
+
+.viz-controls input[type='range'] {
+  width: 120px;
+  accent-color: var(--viz-1);
+}
+
+.viz-controls select,
+.viz-controls button {
+  padding: 3px 8px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+  font-size: 14px;
+}
+
+.viz-controls button {
+  cursor: pointer;
+}
+
+.viz-controls button:hover {
+  background: var(--faint);
+}
+
+.viz-controls .viz-buttons {
+  display: inline-flex;
+  gap: 6px;
+}
+
+.viz-readout {
+  margin: 10px 0 0;
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.viz-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.viz-legend i {
+  display: inline-block;
+  width: 14px;
+  height: 3px;
+  margin-right: 6px;
+  vertical-align: middle;
+  border-radius: 2px;
+  background: currentColor;
+}
+
+.viz-hint {
+  margin: 6px 0 0;
+  color: var(--muted);
+  font-size: 13px;
+  font-style: italic;
+}
+
+.viz-grid-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.viz-grid-list li {
+  margin-bottom: 20px;
+}
+
+.viz-grid-list a {
+  font-size: 20px;
+  letter-spacing: -0.5px;
+}
+
+.viz-grid-list p {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 15px;
+}
+
+/* 3D overlay (three.js), placed exactly over the 2D canvas it replaces */
+.viz-3d {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  border: 1px solid var(--faint);
+  border-radius: 4px;
+  cursor: grab;
+}
+
+.viz-3d[hidden] {
+  display: none;
+}
+
+.viz-3d:active {
+  cursor: grabbing;
+}
+
+.viz-3d[data-loading]::after {
+  content: attr(data-loading);
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: var(--muted);
+  font-size: 14px;
+}

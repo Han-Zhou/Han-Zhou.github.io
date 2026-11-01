@@ -1,0 +1,25 @@
+---
+import { contacts } from '../lib/contact';
+
+interface Props {
+  /** show the handle/address next to each icon */
+  withText?: boolean;
+}
+
+const { withText = false } = Astro.props;
+---
+
+<ul class:list={['contact-icons', { 'contact-icons--text': withText }]}>
+  {contacts.map((c) => (
+    <li>
+      <a href={c.href} aria-label={c.label} title={c.label} rel={c.id === 'email' ? undefined : 'me noopener'} target={c.id === 'email' ? undefined : '_blank'}>
+        <span class="contact-icons__bubble">
+          <svg viewBox={c.viewBox} aria-hidden="true" fill={c.stroke ? 'none' : 'currentColor'} stroke={c.stroke ? 'currentColor' : 'none'} stroke-width={c.stroke ? 1.6 : 0} stroke-linecap="round" stroke-linejoin="round">
+            <path d={c.path} />
+          </svg>
+        </span>
+        {withText && <span class="contact-icons__text">{c.text}</span>}
+      </a>
+    </li>
+  ))}
+</ul>

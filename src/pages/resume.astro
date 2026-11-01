@@ -1,27 +1,19 @@
 ---
-import SiteNav from '../components/SiteNav.astro';
 import BaseLayout from '../layouts/BaseLayout.astro';
+
+const pdf = '/Han_Zhou_resume.pdf';
 ---
 
 <BaseLayout
-  title="Résumé — Coming Soon — Han Zhou"
-  description="Han Zhou's résumé will be available here soon."
-  bodyClass="paper-page"
-  index={false}
+  title="Résumé — Han Zhou"
+  description="Han Zhou's résumé: math, computer science, and machine learning research and engineering."
 >
-  <SiteNav />
-  <main id="main-content" class="utility-shell">
-    <section class="utility-panel">
-      <div class="utility-panel__main">
-        <p class="placeholder-stamp">Not yet available</p>
-        <h1>Résumé coming soon.</h1>
-        <p>The route works; the document does not exist yet. Add the real PDF before the public launch.</p>
-        <div class="utility-links">
-          <a href="/about/">Contact Han</a>
-          <a href="/work/">See work</a>
-        </div>
-      </div>
-      <div class="utility-panel__aside halftone" aria-hidden="true"></div>
-    </section>
-  </main>
+  <h1>Résumé</h1>
+  <p class="resume-actions">
+    <a href={pdf} download>Download PDF</a>
+    <a href={pdf} target="_blank" rel="noopener">Open in a new tab</a>
+  </p>
+  <object class="resume-frame" data={pdf} type="application/pdf" aria-label="Han Zhou's résumé">
+    <p>Your browser can't show the PDF here. <a href={pdf}>Open the résumé</a> instead.</p>
+  </object>
 </BaseLayout>

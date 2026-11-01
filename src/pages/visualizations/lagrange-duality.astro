@@ -1,0 +1,342 @@
+---
+import VizLayout from '../../layouts/VizLayout.astro';
+import { tex } from '../../lib/tex';
+---
+
+<VizLayout
+  title="Lagrange multipliers and duality"
+  topic="Optimization"
+  description="Interactive Lagrangian duality: the dual function as supporting lines of the (g, f) image set, weak and strong duality, and the duality gap."
+>
+  <p>
+    Take a problem with one constraint, and restrict <Fragment set:html={tex(String.raw`x`)} /> to a bounded box <Fragment set:html={tex(String.raw`B \subset \mathbb{R}^2`)} /> so every minimum below is attained:
+  </p>
+  <Fragment set:html={tex(String.raw`p^\star = \min_{x \in B} \; f(x) \quad \text{s.t.} \quad g(x) \le 0.`, true)} />
+  <p>
+    The Lagrangian adds the constraint as a price: <Fragment set:html={tex(String.raw`L(x,\lambda) = f(x) + \lambda\, g(x)`)} />.
+    Minimizing it with no constraint at all gives the <em>dual function</em>
+  </p>
+  <Fragment set:html={tex(String.raw`d(\lambda) = \min_{x \in B} \; f(x) + \lambda\, g(x), \qquad \lambda \ge 0.`, true)} />
+  <p>
+    For every feasible <Fragment set:html={tex(String.raw`x`)} /> and every <Fragment set:html={tex(String.raw`\lambda \ge 0`)} />, <Fragment set:html={tex(String.raw`\lambda g(x) \le 0`)} />, so <Fragment set:html={tex(String.raw`d(\lambda) \le f(x)`)} />. That is <strong>weak duality</strong>: <Fragment set:html={tex(String.raw`d^\star = \max_\lambda d(\lambda) \le p^\star`)} />, always,
+    convex or not. The difference <Fragment set:html={tex(String.raw`p^\star - d^\star`)} /> is the <em>duality gap</em>.
+  </p>
+
+  <h2>The picture that explains everything</h2>
+  <p>
+    Map every <Fragment set:html={tex(String.raw`x`)} /> to the point <Fragment set:html={tex(String.raw`(g(x), f(x))`)} />. This
+    gives the image set <Fragment set:html={tex(String.raw`\mathcal{G}`)} /> in the middle panel. In that plane, <Fragment set:html={tex(String.raw`L = f + \lambda g`)} /> is constant along lines of slope <Fragment set:html={tex(String.raw`-\lambda`)} />. Computing <Fragment set:html={tex(String.raw`d(\lambda)`)} /> means pushing such a
+    line up from below until it touches <Fragment set:html={tex(String.raw`\mathcal{G}`)} />. The line is then a supporting
+    hyperplane, and <Fragment set:html={tex(String.raw`d(\lambda)`)} /> is where it crosses the axis <Fragment set:html={tex(String.raw`g = 0`)} />.
+    The primal value <Fragment set:html={tex(String.raw`p^\star`)} /> is the lowest point of <Fragment set:html={tex(String.raw`\mathcal{G}`)} /> on or left of that axis. The dual problem tilts the line to lift its intercept as high as possible.
+  </p>
+
+  <div class="viz" id="ld">
+    <div class="viz-panels viz-panels--2">
+      <div class="viz-panel">
+        <p class="viz-panel__title">x-space: contours, constraint g = 0, and x(λ) = argmin L(·, λ)</p>
+        <canvas data-c="x" class="square"></canvas>
+      </div>
+      <div class="viz-panel">
+        <p class="viz-panel__title">(g, f)-plane: image set and the supporting line f + λg = d(λ)</p>
+        <canvas data-c="gf" class="square"></canvas>
+      </div>
+    </div>
+    <div class="viz-panels" style="margin-top: 12px;">
+      <div class="viz-panel">
+        <p class="viz-panel__title">Dual function d(λ). Click or drag to choose λ.</p>
+        <canvas data-c="dual" class="short"></canvas>
+      </div>
+    </div>
+    <ul class="viz-legend" data-out="legend"></ul>
+    <div class="viz-controls">
+      <label>Problem
+        <select data-k="prob">
+          <option value="linear">Convex: quadratic + half-plane</option>
+          <option value="disk">Convex: quadratic + disk</option>
+          <option value="gap">Non-convex: double well (gap)</option>
+          <option value="inactive">Convex: inactive constraint</option>
+        </select>
+      </label>
+      <label><input type="checkbox" data-k="eq" /> Equality g(x) = 0</label>
+      <label><input type="checkbox" data-k="lcont" /> Contours of L(·, λ)</label>
+      <label>λ <input type="range" data-k="lam" min="0" max="5" step="0.005" value="0.5" /><output></output></label>
+      <span class="viz-buttons"><button data-act="star">Jump to λ*</button></span>
+    </div>
+    <p class="viz-readout" data-out="readout"></p>
+    <p class="viz-readout" data-out="problem"></p>
+  </div>
+
+  <h2>Reading the panels</h2>
+  <ul>
+    <li>
+      <strong>Stationarity is automatic.</strong> At <Fragment set:html={tex(String.raw`x(\lambda)`)} />, the arrows <Fragment set:html={tex(String.raw`-\nabla f`)} /> and <Fragment set:html={tex(String.raw`\lambda \nabla g`)} /> always
+      coincide, because <Fragment set:html={tex(String.raw`\nabla_x L = 0`)} /> (unless <Fragment set:html={tex(String.raw`x(\lambda)`)} /> sits on the edge of the box). What singles out <Fragment set:html={tex(String.raw`\lambda^\star`)} /> is that <Fragment set:html={tex(String.raw`x(\lambda^\star)`)} /> is also <em>feasible</em>.
+    </li>
+    <li>
+      <strong>Complementary slackness.</strong> At an optimum, <Fragment set:html={tex(String.raw`\lambda^\star g(x^\star) = 0`)} />.
+      Either the constraint is active (<Fragment set:html={tex(String.raw`g = 0`)} />, the tangent point sits on the axis), or the
+      price is zero (<Fragment set:html={tex(String.raw`\lambda^\star = 0`)} />, a horizontal line touches <Fragment set:html={tex(String.raw`\mathcal{G}`)} /> at a point with <Fragment set:html={tex(String.raw`g < 0`)} />). The
+      “inactive constraint” preset shows the second case.
+    </li>
+    <li>
+      <strong>Strong duality.</strong> When <Fragment set:html={tex(String.raw`f`)} /> and <Fragment set:html={tex(String.raw`g`)} /> are
+      convex, the part of <Fragment set:html={tex(String.raw`\mathcal{G}`)} /> that matters (its lower-left boundary) is convex, so a
+      supporting line can touch exactly at <Fragment set:html={tex(String.raw`(0, p^\star)`)} />. Slater’s condition (some strictly
+      feasible point with <Fragment set:html={tex(String.raw`g(x) < 0`)} />) rules out a vertical supporting line there. Then <Fragment set:html={tex(String.raw`d^\star = p^\star`)} />.
+    </li>
+    <li>
+      <strong>The multiplier is a price.</strong> Relax the constraint to <Fragment set:html={tex(String.raw`g(x) \le u`)} /> and let <Fragment set:html={tex(String.raw`p^\star(u)`)} /> be the new optimal value. The lower boundary of <Fragment set:html={tex(String.raw`\mathcal{G}`)} /> traces the graph of <Fragment set:html={tex(String.raw`p^\star(u)`)} />, and
+      the optimal supporting line is tangent to it. So under strong duality <Fragment set:html={tex(String.raw`\frac{d p^\star}{du}\big|_{u=0} = -\lambda^\star`)} />: loosening the constraint by <Fragment set:html={tex(String.raw`\varepsilon`)} /> buys about <Fragment set:html={tex(String.raw`\lambda^\star \varepsilon`)} /> of
+      objective.
+    </li>
+  </ul>
+
+  <h2>Things to try</h2>
+  <ul>
+    <li>Disk preset with Equality ticked: press “Jump to λ*”. At the extremum <Fragment set:html={tex(String.raw`x^*`)} />, the arrows for <Fragment set:html={tex(String.raw`-\nabla f`)} /> and <Fragment set:html={tex(String.raw`\lambda\nabla g`)} /> line up, so <Fragment set:html={tex(String.raw`\nabla f \parallel \nabla g`)} />.</li>
+    <li>Compare the Disk preset (<Fragment set:html={tex(String.raw`\lambda^* > 0`)} />) with Inactive + Equality (<Fragment set:html={tex(String.raw`\lambda^* \approx -0.32`)} />). <Fragment set:html={tex(String.raw`\nabla f`)} /> and <Fragment set:html={tex(String.raw`\nabla g`)} /> point opposite ways at one and the same way at the other, so <Fragment set:html={tex(String.raw`\lambda`)} /> changes sign.</li>
+  </ul>
+</VizLayout>
+
+<script>
+  import { Plot, contours, drawContours, controls, out, fmt, norm, scale, add, withAlpha, type Vec, type ContourSet } from '../../viz/core';
+  import { problems, sampleGrid, argminL, primal, dualCurve, type Problem, type Grid } from '../../viz/duality';
+
+  const root = document.getElementById('ld')!;
+  const cv = (k: string) => root.querySelector<HTMLCanvasElement>(`[data-c="${k}"]`)!;
+  const xp = new Plot(cv('x'), { x: [-4, 4], y: [-4, 4] });
+  const gp = new Plot(cv('gf'), { x: [-1, 1], y: [-1, 1] }, { equal: false });
+  const dp = new Plot(cv('dual'), { x: [0, 1], y: [0, 1] }, { equal: false });
+  const lamInput = root.querySelector<HTMLInputElement>('[data-k="lam"]')!;
+
+  let P: Problem;
+  let G: Grid;
+  let eq = false;
+  let lam = 0.5;
+  let lo = 0;
+  let hi = 5;
+  let fCont: ContourSet;
+  let gCont: ContourSet;
+  let lCont: ContourSet | null = null;
+  let pstar = { x: [0, 0] as Vec, val: 0 };
+  let curve = { lams: [] as number[], ds: [] as number[], lamStar: 0, dStar: 0 };
+  let xl = { x: [0, 0] as Vec, val: 0 };
+  let feasMask: Uint8Array;
+
+  const ctl = controls(root, (p, key) => {
+    if (key === 'prob' || key === 'eq') setProblem();
+    else if (key === 'lam') setLam(p.lam as number, false);
+    else if (key === 'lcont') setLam(lam, false);
+  });
+
+  function setProblem() {
+    const p = ctl.read();
+    P = problems.find((q) => q.id === p.prob)!;
+    eq = p.eq as boolean;
+    G = sampleGrid(P);
+    lo = eq ? -P.lamMax : 0;
+    hi = P.lamMax;
+    lamInput.min = String(lo);
+    lamInput.max = String(hi);
+    lamInput.step = String((hi - lo) / 1000);
+    xp.setView(P.box);
+    fCont = contours(P.f, P.box);
+    gCont = contours(P.g, P.box, { n: 200, levels: [0] });
+    feasMask = Uint8Array.from(G.gs, (v) => (v <= 0 ? 1 : 0));
+    pstar = primal(P, G, eq);
+    curve = dualCurve(P, G, lo, hi);
+
+    // (g, f) view: all of g, the low part of f (where the action is)
+    const fsSorted = Array.from(G.fs).sort((a, b) => a - b);
+    let gmin = Infinity;
+    let gmax = -Infinity;
+    for (const v of G.gs) {
+      gmin = Math.min(gmin, v);
+      gmax = Math.max(gmax, v);
+    }
+    const fBot = Math.min(fsSorted[0], curve.dStar);
+    const fTop = Math.max(pstar.val, fsSorted[Math.floor(fsSorted.length * 0.3)]);
+    const fp = (fTop - fBot) * 0.12 || 1;
+    const gpad = (gmax - gmin) * 0.04;
+    gp.setView({ x: [gmin - gpad, gmax + gpad], y: [fBot - fp, fTop + fp] });
+
+    // dual view
+    const dmin = Math.min(...curve.ds);
+    const dTop = Math.max(pstar.val, curve.dStar);
+    const dpad = (dTop - dmin) * 0.12 || 1;
+    dp.setView({ x: [lo - (hi - lo) * 0.02, hi + (hi - lo) * 0.02], y: [dmin - dpad, dTop + dpad] });
+
+    out(root, 'problem', `f(x, y) = ${P.textF} · g(x, y) = ${P.textG} · box B = [${P.box.x.join(', ')}]²`);
+    setLam(Math.min(hi, Math.max(lo, lam)), true);
+  }
+
+  function setLam(v: number, syncSlider: boolean) {
+    lam = Math.min(hi, Math.max(lo, v));
+    if (syncSlider || String(lam) !== lamInput.value) ctl.set('lam', lam);
+    const o = lamInput.parentElement?.querySelector('output');
+    if (o) o.textContent = fmt(lam);
+    xl = argminL(P, G, lam);
+    lCont = ctl.read().lcont ? contours((x) => P.f(x) + lam * P.g(x), P.box) : null;
+    xp.redraw();
+    gp.redraw();
+    dp.redraw();
+    report();
+  }
+
+  root.querySelector('[data-act="star"]')!.addEventListener('click', () => setLam(curve.lamStar, true));
+
+  // λ via dual plot: click anywhere, or drag the marker
+  dp.onClick((p) => setLam(p[0], true));
+  dp.handle(
+    () => [lam, xl.val],
+    (p) => setLam(p[0], true),
+    20,
+  );
+
+  /* ------------------------------------------------------------ x-space */
+  xp.draw(() => {
+    if (!P) return;
+    const t = xp.theme;
+    const ctx = xp.ctx;
+    // feasible region shading
+    if (!eq) {
+      ctx.fillStyle = withAlpha(t.series[2], 0.1);
+      const n = G.n;
+      const cw = (P.box.x[1] - P.box.x[0]) / (n - 1);
+      const ch = (P.box.y[1] - P.box.y[0]) / (n - 1);
+      const w = cw * (xp.X(1) - xp.X(0)) + 0.6;
+      const h = ch * (xp.X(1) - xp.X(0)) + 0.6;
+      for (let i = 0; i < G.xs.length; i++) {
+        if (!feasMask[i]) continue;
+        const [px, py] = xp.S(G.xs[i]);
+        ctx.fillRect(px - w / 2, py - h / 2, w, h);
+      }
+    }
+    drawContours(xp, lCont ?? fCont, lCont ? t.series[3] : undefined);
+    // box outline
+    const b = P.box;
+    xp.polyline([[b.x[0], b.y[0]], [b.x[1], b.y[0]], [b.x[1], b.y[1]], [b.x[0], b.y[1]]], { color: t.border, width: 1, dash: [4, 4] }, true);
+    // constraint curve
+    const s = gCont.segs[0];
+    ctx.beginPath();
+    for (let k = 0; k < s.length; k += 4) {
+      ctx.moveTo(xp.X(s[k]), xp.Y(s[k + 1]));
+      ctx.lineTo(xp.X(s[k + 2]), xp.Y(s[k + 3]));
+    }
+    ctx.strokeStyle = t.series[2];
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    // primal optimum
+    xp.dot(pstar.x, 5, t.strong);
+    xp.text(pstar.x, 'x*', { dx: 8, dy: -10, color: t.strong });
+
+    // x(λ) with -∇f and λ∇g
+    const gf = P.gf(xl.x);
+    const gg = scale(P.gg(xl.x), lam);
+    const big = Math.max(norm(gf), norm(gg), 1e-9);
+    const L = (55 * xp.px) / big;
+    xp.arrow(xl.x, add(xl.x, scale(gf, -L)), { color: t.series[1], width: 2.5 });
+    xp.arrow(xl.x, add(xl.x, scale(gg, L)), { color: t.series[4], width: 1.5, dash: [5, 4] });
+    xp.dot(xl.x, 5, t.series[0]);
+    xp.text(xl.x, 'x(λ)', { dx: 8, dy: 12, color: t.series[0] });
+  });
+
+  /* ------------------------------------------------------------ (g, f) */
+  gp.draw(() => {
+    if (!P) return;
+    const t = gp.theme;
+    const ctx = gp.ctx;
+    const v = gp.getView();
+    // feasible half-plane
+    if (!eq) {
+      ctx.fillStyle = withAlpha(t.series[2], 0.07);
+      ctx.fillRect(0, 0, gp.X(0), gp.h);
+    }
+    // image set
+    const n = G.n;
+    const feasC = withAlpha(t.series[2], 0.45);
+    const infC = withAlpha(t.muted, 0.28);
+    for (let j = 0; j < n; j += 2) {
+      for (let i = 0; i < n; i += 2) {
+        const idx = j * n + i;
+        const f = G.fs[idx];
+        if (f > v.y[1]) continue;
+        const onC = eq ? Math.abs(G.gs[idx]) < (v.x[1] - v.x[0]) * 0.004 : feasMask[idx];
+        ctx.fillStyle = onC ? feasC : infC;
+        ctx.fillRect(gp.X(G.gs[idx]) - 1, gp.Y(f) - 1, 2, 2);
+      }
+    }
+    // axes
+    gp.line([0, v.y[0]], [0, v.y[1]], { color: t.border, width: 1 });
+    gp.line([v.x[0], 0], [v.x[1], 0], { color: t.faint, width: 1 });
+    gp.text([0, v.y[1]], 'g = 0', { dx: 6, dy: 10, size: 11 });
+    gp.text([v.x[1], v.y[0]], 'g →', { dx: -6, dy: -10, align: 'right', size: 11 });
+    gp.text([v.x[0], v.y[1]], 'f ↑', { dx: 6, dy: 10, size: 11 });
+
+    // supporting line f = d(λ) - λ g
+    const d = xl.val;
+    gp.line([v.x[0], d - lam * v.x[0]], [v.x[1], d - lam * v.x[1]], { color: t.series[0], width: 2 });
+    // tangent point
+    const gx = P.g(xl.x);
+    const fx = P.f(xl.x);
+    gp.dot([gx, fx], 4.5, t.series[0]);
+
+    // gap bracket
+    const gapPx = gp.Y(d) - gp.Y(pstar.val);
+    if (gapPx > 4) {
+      gp.line([0, d], [0, pstar.val], { color: t.series[4], width: 3, alpha: 0.6 });
+      gp.text([0, (d + pstar.val) / 2], `gap ${fmt(pstar.val - d)}`, { dx: -8, align: 'right', color: t.series[4], size: 12 });
+    }
+    gp.dot([0, pstar.val], 5, t.strong);
+    gp.text([0, pstar.val], 'p*', { dx: 8, dy: -8, color: t.strong });
+    gp.dot([0, d], 4.5, t.series[0], true);
+    gp.text([0, d], 'd(λ)', { dx: 8, dy: 10, color: t.series[0] });
+  });
+
+  /* ------------------------------------------------------------ dual */
+  dp.draw(() => {
+    if (!P) return;
+    const t = dp.theme;
+    const v = dp.getView();
+    dp.axes({ ticks: false });
+    const step = (hi - lo) / 5;
+    for (let k = 0; k <= 5; k++) dp.text([lo + k * step, v.y[0]], fmt(lo + k * step), { dy: -8, align: 'center', size: 11 });
+    dp.line([v.x[0], pstar.val], [v.x[1], pstar.val], { color: t.strong, width: 1.25, dash: [6, 4] });
+    dp.text([v.x[1], pstar.val], 'p*', { dx: -6, dy: -9, align: 'right', color: t.strong });
+    dp.line([v.x[0], curve.dStar], [v.x[1], curve.dStar], { color: t.series[0], width: 1, dash: [2, 4] });
+    dp.text([v.x[0], curve.dStar], 'd*', { dx: 6, dy: 10, color: t.series[0] });
+    dp.polyline(curve.lams.map((l, i) => [l, curve.ds[i]] as Vec), { color: t.series[0], width: 2 });
+    dp.line([curve.lamStar, v.y[0]], [curve.lamStar, curve.dStar], { color: t.border, width: 1, dash: [3, 3] });
+    dp.text([curve.lamStar, v.y[0]], 'λ*', { dy: -22, align: 'center', color: t.muted });
+    dp.dot([lam, xl.val], 6, t.series[0], true);
+  });
+
+  function report() {
+    const gx = P.g(xl.x);
+    const t = xp.theme;
+    out(
+      root,
+      'legend',
+      [
+        [t.series[2], eq ? 'constraint g = 0' : 'feasible set g ≤ 0'],
+        [t.strong, 'primal optimum x*, p*'],
+        [t.series[0], 'x(λ), supporting line, d(λ)'],
+        [t.series[1], '−∇f(x(λ))'],
+        [t.series[4], 'λ∇g(x(λ))'],
+      ]
+        .map(([c, l]) => `<li><i style="color:${c}"></i>${l}</li>`)
+        .join(''),
+    );
+    const feasible = eq ? Math.abs(gx) < 1e-3 : gx <= 1e-6;
+    out(
+      root,
+      'readout',
+      `λ = ${fmt(lam)} · x(λ) = (${fmt(xl.x[0])}, ${fmt(xl.x[1])}) · g(x(λ)) = ${fmt(gx)} (${feasible ? 'feasible' : 'infeasible'}) · λ·g = ${fmt(lam * gx)}<br>` +
+        `d(λ) = ${fmt(xl.val)} · d* = ${fmt(curve.dStar)} at λ* ≈ ${fmt(curve.lamStar)} · p* = ${fmt(pstar.val)} · duality gap p* − d* = ${fmt(Math.max(0, pstar.val - curve.dStar))}`,
+    );
+  }
+
+  setProblem();
+</script>

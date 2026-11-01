@@ -1,0 +1,22 @@
+---
+import '../styles/viz.css';
+import BaseLayout from './BaseLayout.astro';
+
+interface Props {
+  title: string;
+  description: string;
+  topic: string;
+}
+
+const { title, description, topic } = Astro.props;
+---
+
+<BaseLayout title={`${title} — Han Zhou`} description={description}>
+  <article>
+    <p class="article-meta" style="margin: 0 0 4px;"><a href="/visualizations/">Visualizations</a> · {topic}</p>
+    <h1>{title}</h1>
+    <div class="prose">
+      <slot />
+    </div>
+  </article>
+</BaseLayout>
